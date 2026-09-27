@@ -17,7 +17,7 @@ export default function CustomerJobsScreen() {
     <TabScreen>
       <ScrollView showsVerticalScrollIndicator={false}>
         <Content>
-          <ThemedText type="subtitle">Your jobs</ThemedText>
+          <ThemedText type="subtitle">Bookings</ThemedText>
           {active.length === 0 ? (
             <ThemedText themeColor="textSecondary">No active visits. Book a free check-up from Home.</ThemedText>
           ) : (

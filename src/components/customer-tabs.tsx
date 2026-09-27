@@ -17,7 +17,7 @@ export default function CustomerTabs() {
         <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="bookings">
-        <NativeTabs.Trigger.Label>Jobs</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Bookings</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="wrench.and.screwdriver.fill" md="build" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="me">

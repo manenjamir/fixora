@@ -3,7 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { AppButton, Content, Screen } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
@@ -23,29 +23,74 @@ export default function BookScreen() {
   const [address, setAddress] = useState('');
   const [mediaUri, setMediaUri] = useState<string>();
   const [mediaType, setMediaType] = useState<'image' | 'video'>();
+  const [mediaBase64, setMediaBase64] = useState<string>();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function pickMedia() {
+  function applyAsset(asset: ImagePicker.ImagePickerAsset) {
+    setMediaUri(asset.uri);
+    setMediaType(asset.type === 'video' ? 'video' : 'image');
+    setMediaBase64(asset.type === 'video' ? undefined : asset.base64 ?? undefined);
+  }
+
+  async function captureMedia(kind: 'images' | 'videos') {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Camera permission needed', 'Allow camera access to take a live photo or video.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: [kind],
+      quality: 0.7,
+      base64: kind === 'images',
+      videoMaxDuration: 30,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    applyAsset(result.assets[0]);
+  }
+
+  async function pickFromGallery() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return;
+    if (!permission.granted) {
+      Alert.alert('Gallery permission needed', 'Allow photo access to attach an existing image or video.');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images', 'videos'],
       quality: 0.7,
+      base64: true,
     });
     if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
-    setMediaUri(asset.uri);
-    setMediaType(asset.type === 'video' ? 'video' : 'image');
+    applyAsset(result.assets[0]);
   }
 
-  function submit() {
-    const job = createJob({
-      category: device.id,
-      mediaUri,
-      mediaType,
-      placeTag,
-      address: address.trim() || `${placeTag} location`,
-    });
-    router.replace(`/(customer)/track/${job.id}`);
+  function showMediaOptions() {
+    Alert.alert('Add a photo or video', 'Choose how you want to show the issue.', [
+      { text: 'Take photo', onPress: () => captureMedia('images') },
+      { text: 'Record video', onPress: () => captureMedia('videos') },
+      { text: 'Choose from gallery', onPress: pickFromGallery },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
+
+  async function submit() {
+    setError(null);
+    setSubmitting(true);
+    try {
+      const job = await createJob({
+        category: device.id,
+        mediaUri,
+        mediaType,
+        mediaBase64,
+        placeTag,
+        address: address.trim() || `${placeTag} location`,
+      });
+      router.replace(`/(customer)/track/${job.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not book this visit');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -54,22 +99,28 @@ export default function BookScreen() {
         <Content>
           <ThemedText type="subtitle">{device.label}</ThemedText>
           <ThemedText themeColor="textSecondary">
-            Upload a photo or video of the issue, then pin where the technician should come.
+            Optionally attach a photo or video, then pin where the technician should come.
           </ThemedText>
 
           <Pressable
-            onPress={pickMedia}
+            accessibilityRole="button"
+            onPress={showMediaOptions}
             style={[styles.media, { backgroundColor: theme.backgroundElement }]}>
             {mediaUri && mediaType !== 'video' ? (
-              <Image source={{ uri: mediaUri }} style={styles.preview} />
+              <>
+                <Image source={{ uri: mediaUri }} style={styles.preview} contentFit="cover" />
+                <ThemedText type="small" themeColor="textSecondary" style={styles.mediaHint}>
+                  Tap to change
+                </ThemedText>
+              </>
             ) : (
               <>
                 <Ionicons name={mediaUri ? 'videocam-outline' : 'camera-outline'} size={32} color={theme.accent} />
                 <ThemedText type="smallBold">
-                  {mediaUri ? 'Media attached (tap to change)' : 'Add photo or video'}
+                  {mediaUri ? 'Video attached' : 'Add a photo or video of the issue'}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
-                  Optional — skip if you prefer
+                  {mediaUri ? 'Tap to change' : 'Optional — tap to add'}
                 </ThemedText>
               </>
             )}
@@ -103,7 +154,12 @@ export default function BookScreen() {
             placeholderTextColor={theme.textSecondary}
             style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
           />
-          <AppButton label="Book free check-up" onPress={submit} />
+          {error ? (
+            <ThemedText type="small" style={{ color: theme.danger }}>
+              {error}
+            </ThemedText>
+          ) : null}
+          <AppButton label={submitting ? 'Booking…' : 'Book free check-up'} disabled={submitting} onPress={submit} />
         </Content>
       </ScrollView>
     </Screen>
@@ -126,6 +182,9 @@ const styles = StyleSheet.create({
   preview: {
     width: '100%',
     height: 180,
+  },
+  mediaHint: {
+    paddingVertical: Spacing.two,
   },
   tags: {
     flexDirection: 'row',

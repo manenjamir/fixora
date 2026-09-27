@@ -26,13 +26,15 @@ export default function EstimateScreen() {
   const tiers: RepairTier[] = ['a1', 'a2', 'a3'];
 
   function accept(tier: RepairTier) {
-    chooseTier(selectedJob.id, tier);
-    router.replace(`/(customer)/track/${selectedJob.id}`);
+    void chooseTier(selectedJob.id, tier).then(() => {
+      router.replace(`/(customer)/track/${selectedJob.id}`);
+    });
   }
 
   function decline() {
-    declineRepair(selectedJob.id);
-    router.replace('/(customer)/(tabs)/bookings');
+    void declineRepair(selectedJob.id).then(() => {
+      router.replace('/(customer)/(tabs)/bookings');
+    });
   }
 
   return (

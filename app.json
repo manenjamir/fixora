@@ -20,7 +20,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -29,8 +29,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow Doorstep to attach a photo or video of the device issue.",
-          "cameraPermission": "Allow Doorstep to photograph the device issue.",
-          "microphonePermission": false
+          "cameraPermission": "Allow Doorstep to photograph or record the device issue.",
+          "microphonePermission": "Allow Doorstep to record a short video of the device issue."
         }
       ],
       [
@@ -40,7 +40,8 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

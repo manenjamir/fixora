@@ -48,12 +48,12 @@ export default function TrackScreen() {
           {job.status === 'quoted' ? (
             <AppButton label="See repair estimate" onPress={() => router.push(`/(customer)/estimate/${job.id}`)} />
           ) : null}
-          {job.status === 'warehouse' || job.status === 'delivered' ? (
-            <AppButton label="Warehouse & loaner" onPress={() => router.push(`/(customer)/warehouse/${job.id}`)} />
+          {job.status === 'warehouse' || job.status === 'out_for_delivery' || job.status === 'delivered' ? (
+            <AppButton label="Warehouse status" onPress={() => router.push(`/(customer)/warehouse/${job.id}`)} />
           ) : null}
           {job.status === 'requested' ? (
             <ThemedText themeColor="textSecondary">
-              A technician will confirm this visit next. Switch to the technician role to dispatch it.
+              We are looking for a technician to perform your free check-up. 
             </ThemedText>
           ) : null}
         </Content>

@@ -14,7 +14,7 @@ export default function TechRouteScreen() {
   const theme = useTheme();
   const { jobs } = useJobs();
   const stops = jobs
-    .filter((job) => ['requested', 'dispatched', 'inspecting', 'accepted'].includes(job.status))
+    .filter((job) => ['requested', 'dispatched', 'inspecting', 'accepted', 'warehouse'].includes(job.status))
     .sort((a, b) => a.technician.etaMinutes - b.technician.etaMinutes);
 
   return (

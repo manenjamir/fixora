@@ -3,6 +3,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { StatusToast } from '@/components/status-toast';
+import { AuthProvider } from '@/context/auth';
 import { JobProvider } from '@/context/job-store';
 
 SplashScreen.preventAutoHideAsync();
@@ -11,15 +13,19 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <JobProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <AnimatedSplashOverlay />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(customer)" />
-          <Stack.Screen name="(tech)" />
-        </Stack>
-      </ThemeProvider>
-    </JobProvider>
+    <AuthProvider>
+      <JobProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <AnimatedSplashOverlay />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="verify" />
+            <Stack.Screen name="(customer)" />
+            <Stack.Screen name="(tech)" />
+          </Stack>
+          <StatusToast />
+        </ThemeProvider>
+      </JobProvider>
+    </AuthProvider>
   );
 }

@@ -2,23 +2,24 @@ import { useRouter } from 'expo-router';
 
 import { AppButton, Content, TabScreen } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
-import { useJobs } from '@/context/job-store';
+import { useAuth } from '@/context/auth';
 
 export default function TechAccountScreen() {
   const router = useRouter();
-  const { setRole } = useJobs();
+  const { profile, signOut } = useAuth();
 
   return (
     <TabScreen>
       <Content>
         <ThemedText type="subtitle">Technician</ThemedText>
-        <ThemedText type="smallBold">Ravi Singh · Tech #12</ThemedText>
-        <ThemedText themeColor="textSecondary">Demo kit: portable repair bag + van stock.</ThemedText>
+        <ThemedText type="smallBold">{profile?.full_name || 'Technician'}</ThemedText>
+        <ThemedText themeColor="textSecondary">+{profile?.phone ?? 'Signed in'}</ThemedText>
+        <ThemedText themeColor="textSecondary">Portable repair bag + van stock.</ThemedText>
         <AppButton
-          label="Switch role"
+          label="Sign out"
           variant="secondary"
-          onPress={() => {
-            setRole(null);
+          onPress={async () => {
+            await signOut();
             router.replace('/');
           }}
         />

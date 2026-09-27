@@ -2,26 +2,26 @@ import { useRouter } from 'expo-router';
 
 import { AppButton, Content, TabScreen } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
-import { useJobs } from '@/context/job-store';
+import { useAuth } from '@/context/auth';
 
 export default function CustomerAccountScreen() {
   const router = useRouter();
-  const { setRole } = useJobs();
+  const { profile, signOut } = useAuth();
 
   return (
     <TabScreen>
       <Content>
         <ThemedText type="subtitle">Account</ThemedText>
-        <ThemedText type="smallBold">Alex Kumar</ThemedText>
-        <ThemedText themeColor="textSecondary">+91 90000 11111 · Demo customer</ThemedText>
+        <ThemedText type="smallBold">{profile?.full_name || 'Customer'}</ThemedText>
+        <ThemedText themeColor="textSecondary">+{profile?.phone ?? 'Signed in'}</ThemedText>
         <ThemedText themeColor="textSecondary">
-          Personal bookings only. Commercial AMC plans are not in this version.
+          Book,manage, and track your service in one place.
         </ThemedText>
         <AppButton
-          label="Switch role"
+          label="Sign out"
           variant="secondary"
-          onPress={() => {
-            setRole(null);
+          onPress={async () => {
+            await signOut();
             router.replace('/');
           }}
         />

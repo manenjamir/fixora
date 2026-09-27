@@ -59,9 +59,10 @@ type ButtonProps = Omit<PressableProps, 'style'> & {
   label: string;
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   style?: StyleProp<ViewStyle>;
+  busy?: boolean;
 };
 
-export function AppButton({ label, variant = 'primary', disabled, style, ...rest }: ButtonProps) {
+export function AppButton({ label, variant = 'primary', disabled, style, busy, ...rest }: ButtonProps) {
   const theme = useTheme();
   const backgroundColor =
     variant === 'primary'
@@ -76,23 +77,32 @@ export function AppButton({ label, variant = 'primary', disabled, style, ...rest
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={disabled}
+      disabled={disabled || busy}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor, opacity: disabled ? 0.5 : pressed ? 0.8 : 1 },
+        { backgroundColor, opacity: disabled || busy ? 0.5 : pressed ? 0.8 : 1 },
         style,
       ]}
       {...rest}>
-      <ThemedText style={{ color, fontWeight: 700 }}>{label}</ThemedText>
+      <ThemedText style={{ color, fontWeight: 700 }}>{busy ? 'Please wait…' : label}</ThemedText>
     </Pressable>
   );
 }
 
 export function StatusChip({ status }: { status: JobStatus }) {
   const theme = useTheme();
+  const declined = status === 'declined_by_customer' || status === 'declined_by_technician';
   return (
-    <View style={[styles.chip, { backgroundColor: theme.backgroundElement }]}>
-      <ThemedText type="smallBold">{STATUS_LABEL[status]}</ThemedText>
+    <View
+      style={[
+        styles.chip,
+        {
+          backgroundColor: declined ? 'rgba(220, 38, 38, 0.12)' : theme.backgroundElement,
+        },
+      ]}>
+      <ThemedText type="smallBold" style={declined ? { color: theme.danger } : undefined}>
+        {STATUS_LABEL[status]}
+      </ThemedText>
     </View>
   );
 }

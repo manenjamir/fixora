@@ -13,7 +13,7 @@ export default function CustomerTabs() {
             <TabButton>Home</TabButton>
           </TabTrigger>
           <TabTrigger name="bookings" href="/(customer)/(tabs)/bookings" asChild>
-            <TabButton>Jobs</TabButton>
+            <TabButton>Bookings</TabButton>
           </TabTrigger>
           <TabTrigger name="me" href="/(customer)/(tabs)/me" asChild>
             <TabButton>Account</TabButton>

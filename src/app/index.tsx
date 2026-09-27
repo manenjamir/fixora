@@ -1,66 +1,88 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { Content, Screen } from '@/components/repair-ui';
+import { AppButton, Content, Screen } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
+import { useAuth } from '@/context/auth';
+import type { AppRole } from '@/context/job-store';
 import { Spacing } from '@/constants/theme';
-import { useJobs, type AppRole } from '@/context/job-store';
 import { useTheme } from '@/hooks/use-theme';
 
-export default function RolePickerScreen() {
+export default function SignInScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { setRole } = useJobs();
+  const { session, profile, loading, sendOtp } = useAuth();
+  const [phone, setPhone] = useState('');
+  const [role, setRole] = useState<AppRole>('customer');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function enter(role: AppRole) {
-    setRole(role);
-    router.replace(role === 'customer' ? '/(customer)/(tabs)/home' : '/(tech)/(tabs)/inbox');
+  useEffect(() => {
+    if (loading || !session || !profile) return;
+    router.replace(profile.role === 'tech' ? '/(tech)/(tabs)/inbox' : '/(customer)/(tabs)/home');
+  }, [loading, profile, router, session]);
+
+  async function submit() {
+    setError(null);
+    setBusy(true);
+    try {
+      await sendOtp(phone, role);
+      router.push({ pathname: '/verify', params: { phone, role } });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send OTP. Enable Phone auth in Supabase.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <Screen>
       <Content style={styles.content}>
         <View style={styles.hero}>
-          <ThemedText type="subtitle">Doorstep repair</ThemedText>
+          <ThemedText type="subtitle">Fixora</ThemedText>
           <ThemedText themeColor="textSecondary">
-            Free check-up at your place. You only pay if you repair.
+             You only pay if you repair.
           </ThemedText>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Continue as customer"
-          onPress={() => enter('customer')}
-          style={({ pressed }) => [
-            styles.card,
-            { backgroundColor: theme.backgroundElement, opacity: pressed ? 0.85 : 1 },
-          ]}>
-          <Ionicons name="person-outline" size={28} color={theme.accent} />
-          <View style={styles.cardCopy}>
-            <ThemedText type="smallBold">Continue as customer</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Book a technician, track arrival, and choose A1 / A2 / A3.
-            </ThemedText>
-          </View>
-        </Pressable>
+        <ThemedText type="smallBold">Phone</ThemedText>
+        <TextInput
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+          placeholder="+91 90000 11111"
+          placeholderTextColor={theme.textSecondary}
+          style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+        />
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Continue as technician"
-          onPress={() => enter('tech')}
-          style={({ pressed }) => [
-            styles.card,
-            { backgroundColor: theme.backgroundElement, opacity: pressed ? 0.85 : 1 },
-          ]}>
-          <Ionicons name="construct-outline" size={28} color={theme.accent} />
-          <View style={styles.cardCopy}>
-            <ThemedText type="smallBold">Continue as technician</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Route jobs, send quotes, and close on-site or warehouse visits.
-            </ThemedText>
-          </View>
-        </Pressable>
+        <View style={styles.row}>
+          {(['customer', 'tech'] as const).map((option) => {
+            const selected = option === role;
+            return (
+              <Pressable
+                key={option}
+                accessibilityRole="button"
+                onPress={() => setRole(option)}
+                style={[
+                  styles.role,
+                  { backgroundColor: selected ? theme.accent : theme.backgroundElement },
+                ]}>
+                <ThemedText type="smallBold" style={{ color: selected ? '#ffffff' : theme.text }}>
+                  {option === 'customer' ? 'Customer' : 'Technician'}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {error ? (
+          <ThemedText type="small" style={{ color: theme.danger }}>
+            {error}
+          </ThemedText>
+        ) : null}
+
+        <AppButton label={busy ? 'Sending code…' : 'Send OTP'} disabled={busy || phone.trim().length < 10} onPress={submit} />
       </Content>
     </Screen>
   );
@@ -74,15 +96,21 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     marginBottom: Spacing.two,
   },
-  card: {
-    flexDirection: 'row',
-    gap: Spacing.three,
-    padding: Spacing.four,
-    borderRadius: 18,
-    alignItems: 'center',
+  input: {
+    minHeight: 48,
+    borderRadius: 14,
+    paddingHorizontal: Spacing.three,
+    fontSize: 16,
   },
-  cardCopy: {
+  row: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  role: {
     flex: 1,
-    gap: 4,
+    minHeight: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
