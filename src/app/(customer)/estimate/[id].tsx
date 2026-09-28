@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { AppButton, Content, Screen } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import { formatRupees, TIER_COPY, useJobs, type RepairTier } from '@/context/job-store';
+import { formatRupees, REPAIR_LOCATION_COPY, TIER_COPY, useJobs, type RepairTier } from '@/context/job-store';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function EstimateScreen() {
@@ -43,6 +43,14 @@ export default function EstimateScreen() {
         <Content>
           <ThemedText type="subtitle">Exact repair cost</ThemedText>
           <ThemedText themeColor="textSecondary">{selectedJob.diagnosis}</ThemedText>
+          {selectedJob.repairLocation ? (
+            <View style={[styles.location, { backgroundColor: theme.backgroundElement }]}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Repair location
+              </ThemedText>
+              <ThemedText type="smallBold">{REPAIR_LOCATION_COPY[selectedJob.repairLocation]}</ThemedText>
+            </View>
+          ) : null}
           {tiers.map((tier) => (
             <Pressable
               key={tier}
@@ -78,5 +86,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.four,
     borderRadius: 16,
+  },
+  location: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    gap: Spacing.one,
   },
 });

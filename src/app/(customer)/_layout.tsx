@@ -8,6 +8,7 @@ export default function CustomerLayout() {
       <Stack.Screen name="track/[id]" options={{ title: 'Live tracking' }} />
       <Stack.Screen name="estimate/[id]" options={{ title: 'Repair estimate' }} />
       <Stack.Screen name="warehouse/[id]" options={{ title: 'Warehouse' }} />
+      <Stack.Screen name="history/[id]" options={{ title: 'Past repair' }} />
     </Stack>
   );
 }

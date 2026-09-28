@@ -17,6 +17,9 @@ export type Database = {
           address: string
           category: string
           chosen_tier: string | null
+          completed_at: string | null
+          completion_media_path: string | null
+          completion_media_type: string | null
           created_at: string
           customer_id: string
           diagnosis: string | null
@@ -29,6 +32,7 @@ export type Database = {
           parts_in_stock: boolean
           place_tag: string
           price_a1: number | null
+          repair_location: string | null
           price_a2: number | null
           price_a3: number | null
           status: string
@@ -41,6 +45,9 @@ export type Database = {
           address: string
           category: string
           chosen_tier?: string | null
+          completed_at?: string | null
+          completion_media_path?: string | null
+          completion_media_type?: string | null
           created_at?: string
           customer_id: string
           diagnosis?: string | null
@@ -53,6 +60,7 @@ export type Database = {
           parts_in_stock?: boolean
           place_tag: string
           price_a1?: number | null
+          repair_location?: string | null
           price_a2?: number | null
           price_a3?: number | null
           status?: string
@@ -65,6 +73,9 @@ export type Database = {
           address?: string
           category?: string
           chosen_tier?: string | null
+          completed_at?: string | null
+          completion_media_path?: string | null
+          completion_media_type?: string | null
           created_at?: string
           customer_id?: string
           diagnosis?: string | null
@@ -77,6 +88,7 @@ export type Database = {
           parts_in_stock?: boolean
           place_tag?: string
           price_a1?: number | null
+          repair_location?: string | null
           price_a2?: number | null
           price_a3?: number | null
           status?: string
@@ -109,6 +121,7 @@ export type Database = {
           id: string
           phone: string | null
           role: string
+          specializations: string[]
         }
         Insert: {
           created_at?: string
@@ -116,6 +129,7 @@ export type Database = {
           id: string
           phone?: string | null
           role: string
+          specializations?: string[]
         }
         Update: {
           created_at?: string
@@ -123,6 +137,7 @@ export type Database = {
           id?: string
           phone?: string | null
           role?: string
+          specializations?: string[]
         }
         Relationships: []
       }

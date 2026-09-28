@@ -13,6 +13,7 @@ type AuthContextValue = {
   loading: boolean;
   sendOtp: (phone: string, role: AppRole) => Promise<void>;
   verifyOtp: (phone: string, token: string) => Promise<void>;
+  saveSpecializations: (specializations: string[]) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -97,6 +98,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, []);
 
+  const saveSpecializations = useCallback(async (specializations: string[]) => {
+    if (!session?.user.id) throw new Error('Sign in before choosing specializations');
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ specializations })
+      .eq('id', session.user.id)
+      .select('*')
+      .single();
+    if (error || !data) throw error ?? new Error('Could not save specializations');
+    setProfile(data);
+  }, [session?.user.id]);
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
@@ -104,8 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ session, profile, loading, sendOtp, verifyOtp, signOut }),
-    [session, profile, loading, sendOtp, verifyOtp, signOut],
+    () => ({ session, profile, loading, sendOtp, verifyOtp, saveSpecializations, signOut }),
+    [session, profile, loading, sendOtp, verifyOtp, saveSpecializations, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

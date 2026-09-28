@@ -3,13 +3,22 @@ import { ScrollView } from 'react-native';
 
 import { Content, JobRow, TabScreen } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
+import { groupForCategory } from '@/constants/devices';
+import { useAuth } from '@/context/auth';
 import { useJobs } from '@/context/job-store';
 import { isActiveJob } from '@/lib/job-routes';
 
 export default function TechJobsScreen() {
   const router = useRouter();
+  const { session, profile } = useAuth();
   const { jobs } = useJobs();
-  const openJobs = jobs.filter(isActiveJob);
+  const specializations = profile?.specializations ?? [];
+  const openJobs = jobs.filter((job) => {
+    if (!isActiveJob(job)) return false;
+    if (job.technicianId && job.technicianId === session?.user.id) return true;
+    if (job.technicianId) return false;
+    return specializations.includes(groupForCategory(job.category));
+  });
 
   return (
     <TabScreen>

@@ -1,3 +1,4 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -7,7 +8,7 @@ import { AppButton, Content, Screen, StatusChip } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
 import { getDevice } from '@/constants/devices';
 import { Spacing } from '@/constants/theme';
-import { formatRupees, TIER_COPY, useJobs } from '@/context/job-store';
+import { formatRupees, REPAIR_LOCATION_COPY, TIER_COPY, useJobs, type JobMediaInput, type RepairLocation } from '@/context/job-store';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function TechJobScreen() {
@@ -21,6 +22,7 @@ export default function TechJobScreen() {
     startInspection,
     sendQuote,
     resolveJob,
+    completeOnSite,
     markReadyToShip,
     markDelivered,
   } = useJobs();
@@ -30,7 +32,10 @@ export default function TechJobScreen() {
   const [a1, setA1] = useState(job?.tiers?.a1?.toString() ?? '2499');
   const [a2, setA2] = useState(job?.tiers?.a2?.toString() ?? '1499');
   const [a3, setA3] = useState(job?.tiers?.a3?.toString() ?? '799');
+  const [repairLocation, setRepairLocation] = useState<RepairLocation | null>(job?.repairLocation ?? null);
+  const [completionMedia, setCompletionMedia] = useState<JobMediaInput>();
   const [sendingQuote, setSendingQuote] = useState(false);
+  const [finishing, setFinishing] = useState(false);
 
   if (!job) {
     return (
@@ -48,20 +53,68 @@ export default function TechJobScreen() {
   const inStockSelected = selectedJob.partsChecked && selectedJob.partsInStock;
   const outOfStockSelected = selectedJob.partsChecked && !selectedJob.partsInStock;
 
+  const selectedLocation = repairLocation ?? selectedJob.repairLocation ?? null;
+
   async function submitQuote() {
     if (sendingQuote) return;
+    if (!selectedLocation) {
+      Alert.alert('Choose a repair location', 'Select on-site or warehouse before sending the estimate.');
+      return;
+    }
     setSendingQuote(true);
     try {
-      await sendQuote(selectedJob.id, diagnosis.trim() || `${device.label} issue confirmed on-site`, {
-        a1: Number(a1) || 0,
-        a2: Number(a2) || 0,
-        a3: Number(a3) || 0,
-      });
+      await sendQuote(
+        selectedJob.id,
+        diagnosis.trim() || `${device.label} issue confirmed on-site`,
+        {
+          a1: Number(a1) || 0,
+          a2: Number(a2) || 0,
+          a3: Number(a3) || 0,
+        },
+        selectedLocation,
+      );
       Alert.alert('Estimate Sent Successfully!');
     } catch (error) {
       Alert.alert('Could not send estimate', error instanceof Error ? error.message : 'Try again');
     } finally {
       setSendingQuote(false);
+    }
+  }
+
+  async function pickCompletionPhoto() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Gallery permission needed', 'Allow photo access to attach a completion photo.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+      base64: true,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    setCompletionMedia({
+      uri: asset.uri,
+      mediaType: 'image',
+      mediaBase64: asset.base64 ?? undefined,
+    });
+  }
+
+  async function finish(kind: 'on_site' | 'delivered') {
+    if (finishing) return;
+    setFinishing(true);
+    try {
+      if (kind === 'on_site') {
+        await completeOnSite(selectedJob.id, completionMedia);
+      } else {
+        await markDelivered(selectedJob.id, completionMedia);
+      }
+      router.replace('/(tech)/(tabs)/inbox');
+    } catch (error) {
+      Alert.alert('Could not finish this job', error instanceof Error ? error.message : 'Try again');
+    } finally {
+      setFinishing(false);
     }
   }
 
@@ -133,7 +186,27 @@ export default function TechJobScreen() {
 
           {canQuote ? (
             <>
-              <ThemedText type="smallBold">On-site diagnosis & quote</ThemedText>
+              <ThemedText type="smallBold">Repair location</ThemedText>
+              <View style={styles.row}>
+                {(['on_site', 'warehouse'] as const).map((option) => {
+                  const selected = selectedLocation === option;
+                  return (
+                    <Pressable
+                      key={option}
+                      accessibilityRole="button"
+                      onPress={() => setRepairLocation(option)}
+                      style={[
+                        styles.toggle,
+                        { backgroundColor: selected ? theme.accent : theme.backgroundElement },
+                      ]}>
+                      <ThemedText type="smallBold" style={{ color: selected ? '#ffffff' : theme.text }}>
+                        {REPAIR_LOCATION_COPY[option]}
+                      </ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <ThemedText type="smallBold">Diagnosis & quote</ThemedText>
               <TextInput
                 value={diagnosis}
                 onChangeText={setDiagnosis}
@@ -160,6 +233,7 @@ export default function TechJobScreen() {
               })}
               <AppButton
                 busy={sendingQuote}
+                disabled={!selectedLocation}
                 label={`Send estimate (${formatRupees(Number(a1) || 0)} / ${formatRupees(Number(a2) || 0)} / ${formatRupees(Number(a3) || 0)})`}
                 onPress={submitQuote}
               />
@@ -184,21 +258,40 @@ export default function TechJobScreen() {
           {canResolve ? (
             <>
               <ThemedText type="smallBold">Job resolution</ThemedText>
-              <AppButton
-                label="Repaired on-site"
-                onPress={async () => {
-                  await resolveJob(selectedJob.id, 'on_site_repaired');
-                  router.replace('/(tech)/(tabs)/inbox');
-                }}
-              />
-              <AppButton
-                label="Taking to warehouse"
-                variant="secondary"
-                onPress={async () => {
-                  await resolveJob(selectedJob.id, 'warehouse');
-                  router.replace('/(tech)/(tabs)/inbox');
-                }}
-              />
+              {selectedJob.repairLocation ? (
+                <ThemedText themeColor="textSecondary">
+                  Customer approved {REPAIR_LOCATION_COPY[selectedJob.repairLocation]}.
+                </ThemedText>
+              ) : (
+                <ThemedText themeColor="textSecondary">
+                  This estimate has no repair location. Choose where the repair will happen.
+                </ThemedText>
+              )}
+              {selectedJob.repairLocation === 'on_site' || !selectedJob.repairLocation ? (
+                <>
+                  <AppButton
+                    label={completionMedia ? 'Completion photo attached' : 'Add completion photo'}
+                    variant="secondary"
+                    onPress={pickCompletionPhoto}
+                  />
+                  {completionMedia ? <JobMediaPreview uri={completionMedia.uri} mediaType={completionMedia.mediaType} /> : null}
+                  <AppButton
+                    busy={finishing}
+                    label="Repaired on-site"
+                    onPress={() => finish('on_site')}
+                  />
+                </>
+              ) : null}
+              {selectedJob.repairLocation === 'warehouse' || !selectedJob.repairLocation ? (
+                <AppButton
+                  label="Taking to warehouse"
+                  variant="secondary"
+                  onPress={async () => {
+                    await resolveJob(selectedJob.id, 'warehouse');
+                    router.replace('/(tech)/(tabs)/inbox');
+                  }}
+                />
+              ) : null}
               <AppButton
                 label="Declined · close ticket"
                 variant="danger"
@@ -230,11 +323,15 @@ export default function TechJobScreen() {
                 Confirm once the device has been delivered to the customer&apos;s address.
               </ThemedText>
               <AppButton
+                label={completionMedia ? 'Completion photo attached' : 'Add completion photo'}
+                variant="secondary"
+                onPress={pickCompletionPhoto}
+              />
+              {completionMedia ? <JobMediaPreview uri={completionMedia.uri} mediaType={completionMedia.mediaType} /> : null}
+              <AppButton
+                busy={finishing}
                 label="Confirm delivered to customer"
-                onPress={async () => {
-                  await markDelivered(selectedJob.id);
-                  router.replace('/(tech)/(tabs)/inbox');
-                }}
+                onPress={() => finish('delivered')}
               />
             </View>
           ) : null}

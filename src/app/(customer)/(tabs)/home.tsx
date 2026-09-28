@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Content, TabScreen } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
-import { DEVICE_CATEGORIES } from '@/constants/devices';
+import { DEVICE_GROUPS } from '@/constants/devices';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -21,24 +21,29 @@ export default function CustomerHomeScreen() {
             <ThemedText style={styles.bannerTitle}>Free Doorstep Check-up</ThemedText>
             <ThemedText style={styles.bannerBody}>You only pay if you repair. Decline costs ₹0.</ThemedText>
           </View>
-          <View style={styles.grid}>
-            {DEVICE_CATEGORIES.map((device) => (
-              <Pressable
-                key={device.id}
-                accessibilityRole="button"
-                accessibilityLabel={device.label}
-                onPress={() => router.push(`/(customer)/book/${device.id}`)}
-                style={({ pressed }) => [
-                  styles.tile,
-                  { backgroundColor: theme.backgroundElement, opacity: pressed ? 0.8 : 1 },
-                ]}>
-                <Ionicons name={device.icon} size={28} color={theme.accent} />
-                <ThemedText type="smallBold" style={styles.tileLabel}>
-                  {device.label}
-                </ThemedText>
-              </Pressable>
-            ))}
-          </View>
+          {DEVICE_GROUPS.map((group) => (
+            <View key={group.id} style={styles.group}>
+              <ThemedText type="smallBold">{group.label}</ThemedText>
+              <View style={styles.grid}>
+                {group.devices.map((device) => (
+                  <Pressable
+                    key={device.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={device.label}
+                    onPress={() => router.push(`/(customer)/book/${device.id}`)}
+                    style={({ pressed }) => [
+                      styles.tile,
+                      { backgroundColor: theme.backgroundElement, opacity: pressed ? 0.8 : 1 },
+                    ]}>
+                    <Ionicons name={device.icon} size={28} color={theme.accent} />
+                    <ThemedText type="smallBold" style={styles.tileLabel}>
+                      {device.label}
+                    </ThemedText>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ))}
         </Content>
       </ScrollView>
     </TabScreen>
@@ -60,16 +65,19 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
   },
+  group: {
+    gap: Spacing.two,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
   },
   tile: {
-    width: '31%',
-    minWidth: 96,
+    width: '47%',
+    minWidth: 140,
+    minHeight: 120,
     flexGrow: 1,
-    aspectRatio: 1,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',

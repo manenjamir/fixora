@@ -31,7 +31,7 @@ export default function CustomerJobsScreen() {
                 Past
               </ThemedText>
               {past.map((job) => (
-                <JobRow key={job.id} job={job} onPress={() => router.push(customerJobHref(job))} />
+                <JobRow key={job.id} job={job} onPress={() => router.push(`/(customer)/history/${job.id}`)} />
               ))}
             </>
           ) : null}

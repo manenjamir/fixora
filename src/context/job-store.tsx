@@ -23,29 +23,53 @@ export type JobStatus =
 
 export type RepairTier = 'a1' | 'a2' | 'a3';
 
+export type RepairLocation = 'on_site' | 'warehouse';
+
+export const REPAIR_LOCATION_COPY: Record<RepairLocation, string> = {
+  on_site: 'On-Site Repair',
+  warehouse: 'Warehouse Repair',
+};
+
+export function isRepairLocation(value: string | null | undefined): value is RepairLocation {
+  return value === 'on_site' || value === 'warehouse';
+}
+
 export type JobTiers = {
   a1: number;
   a2: number;
   a3: number;
 };
 
+export type JobMediaInput = {
+  uri: string;
+  mediaType: 'image' | 'video';
+  mediaBase64?: string;
+};
+
 export type Job = {
   id: string;
+  customerId: string;
+  technicianId?: string;
   category: DeviceCategoryId;
   mediaPath?: string;
   mediaUri?: string;
   mediaType?: 'image' | 'video';
+  completionMediaUri?: string;
+  completionMediaType?: 'image' | 'video';
   placeTag: PlaceTag;
   address: string;
   status: JobStatus;
   diagnosis?: string;
   tiers?: JobTiers;
   chosenTier?: RepairTier;
+  repairLocation?: RepairLocation;
   estimatedCompletion: string;
   partsInStock: boolean;
   partsChecked: boolean;
   technician: { lat: number; lng: number; etaMinutes: number };
   createdAt: number;
+  updatedAt: number;
+  completedAt?: number;
 };
 
 type CreateJobInput = {
@@ -65,12 +89,13 @@ type JobContextValue = {
   setPartsCheck: (id: string, inStock: boolean) => Promise<void>;
   startDispatch: (id: string) => Promise<void>;
   startInspection: (id: string) => Promise<void>;
-  sendQuote: (id: string, diagnosis: string, tiers: JobTiers) => Promise<void>;
+  sendQuote: (id: string, diagnosis: string, tiers: JobTiers, repairLocation: RepairLocation) => Promise<void>;
   chooseTier: (id: string, tier: RepairTier) => Promise<void>;
   declineRepair: (id: string) => Promise<void>;
-  resolveJob: (id: string, status: 'on_site_repaired' | 'warehouse' | 'declined_by_technician') => Promise<void>;
+  resolveJob: (id: string, status: 'warehouse' | 'declined_by_technician') => Promise<void>;
+  completeOnSite: (id: string, media?: JobMediaInput) => Promise<void>;
   markReadyToShip: (id: string) => Promise<void>;
-  markDelivered: (id: string) => Promise<void>;
+  markDelivered: (id: string, media?: JobMediaInput) => Promise<void>;
 };
 
 const JobContext = createContext<JobContextValue | null>(null);
@@ -131,6 +156,7 @@ async function signedMediaUri(path: string | null) {
 
 async function mapRow(row: JobRow): Promise<Job> {
   const mediaUri = await signedMediaUri(row.media_path);
+  const completionMediaUri = await signedMediaUri(row.completion_media_path);
   const tiers =
     row.price_a1 != null && row.price_a2 != null && row.price_a3 != null
       ? { a1: Number(row.price_a1), a2: Number(row.price_a2), a3: Number(row.price_a3) }
@@ -138,16 +164,22 @@ async function mapRow(row: JobRow): Promise<Job> {
 
   return {
     id: row.id,
+    customerId: row.customer_id,
+    technicianId: row.technician_id ?? undefined,
     category: row.category as DeviceCategoryId,
     mediaPath: row.media_path ?? undefined,
     mediaUri,
     mediaType: row.media_type === 'video' ? 'video' : row.media_type === 'image' ? 'image' : undefined,
+    completionMediaUri,
+    completionMediaType:
+      row.completion_media_type === 'video' ? 'video' : row.completion_media_type === 'image' ? 'image' : undefined,
     placeTag: row.place_tag as PlaceTag,
     address: row.address,
     status: isJobStatus(row.status) ? row.status : 'requested',
     diagnosis: row.diagnosis ?? undefined,
     tiers,
     chosenTier: row.chosen_tier === 'a1' || row.chosen_tier === 'a2' || row.chosen_tier === 'a3' ? row.chosen_tier : undefined,
+    repairLocation: isRepairLocation(row.repair_location) ? row.repair_location : undefined,
     estimatedCompletion: row.estimated_completion || '1-2 days',
     partsInStock: row.parts_in_stock,
     partsChecked: row.parts_checked,
@@ -157,6 +189,8 @@ async function mapRow(row: JobRow): Promise<Job> {
       etaMinutes: row.eta_minutes ?? 22,
     },
     createdAt: new Date(row.created_at).getTime(),
+    updatedAt: new Date(row.updated_at).getTime(),
+    completedAt: row.completed_at ? new Date(row.completed_at).getTime() : undefined,
   };
 }
 
@@ -166,9 +200,10 @@ async function uploadMedia(
   uri: string,
   mediaType: 'image' | 'video',
   mediaBase64?: string,
+  fileName = 'issue',
 ) {
   const extension = mediaType === 'video' ? 'mp4' : 'jpg';
-  const path = `${userId}/${jobId}/issue.${extension}`;
+  const path = `${userId}/${jobId}/${fileName}.${extension}`;
   const contentType = mediaType === 'video' ? 'video/mp4' : 'image/jpeg';
 
   let body: Uint8Array | Blob;
@@ -310,15 +345,30 @@ export function JobProvider({ children }: { children: ReactNode }) {
   const startInspection = useCallback((id: string) => updateJob(id, { status: 'inspecting' }), [updateJob]);
 
   const sendQuote = useCallback(
-    (id: string, diagnosis: string, tiers: JobTiers) =>
+    (id: string, diagnosis: string, tiers: JobTiers, repairLocation: RepairLocation) =>
       updateJob(id, {
         status: 'quoted',
         diagnosis,
         price_a1: tiers.a1,
         price_a2: tiers.a2,
         price_a3: tiers.a3,
+        repair_location: repairLocation,
       }),
     [updateJob],
+  );
+
+  const attachCompletion = useCallback(
+    async (id: string, media?: JobMediaInput) => {
+      if (!media) return {};
+      const job = jobsRef.current.find((item) => item.id === id);
+      if (!job) throw new Error('Job not found');
+      const path = await uploadMedia(job.customerId, id, media.uri, media.mediaType, media.mediaBase64, 'completion');
+      return {
+        completion_media_path: path,
+        completion_media_type: media.mediaType,
+      };
+    },
+    [],
   );
 
   const chooseTier = useCallback(
@@ -332,13 +382,35 @@ export function JobProvider({ children }: { children: ReactNode }) {
   );
 
   const resolveJob = useCallback(
-    (id: string, status: 'on_site_repaired' | 'warehouse' | 'declined_by_technician') => updateJob(id, { status }),
+    (id: string, status: 'warehouse' | 'declined_by_technician') => updateJob(id, { status }),
     [updateJob],
+  );
+
+  const completeOnSite = useCallback(
+    async (id: string, media?: JobMediaInput) => {
+      const mediaValues = await attachCompletion(id, media);
+      await updateJob(id, {
+        status: 'on_site_repaired',
+        completed_at: new Date().toISOString(),
+        ...mediaValues,
+      });
+    },
+    [attachCompletion, updateJob],
   );
 
   const markReadyToShip = useCallback((id: string) => updateJob(id, { status: 'out_for_delivery' }), [updateJob]);
 
-  const markDelivered = useCallback((id: string) => updateJob(id, { status: 'delivered' }), [updateJob]);
+  const markDelivered = useCallback(
+    async (id: string, media?: JobMediaInput) => {
+      const mediaValues = await attachCompletion(id, media);
+      await updateJob(id, {
+        status: 'delivered',
+        completed_at: new Date().toISOString(),
+        ...mediaValues,
+      });
+    },
+    [attachCompletion, updateJob],
+  );
 
   const value = useMemo(
     () => ({
@@ -353,6 +425,7 @@ export function JobProvider({ children }: { children: ReactNode }) {
       chooseTier,
       declineRepair,
       resolveJob,
+      completeOnSite,
       markReadyToShip,
       markDelivered,
     }),
@@ -368,6 +441,7 @@ export function JobProvider({ children }: { children: ReactNode }) {
       chooseTier,
       declineRepair,
       resolveJob,
+      completeOnSite,
       markReadyToShip,
       markDelivered,
     ],
@@ -386,6 +460,10 @@ type DatabaseUpdate = {
   price_a2?: number;
   price_a3?: number;
   chosen_tier?: RepairTier | null;
+  repair_location?: RepairLocation;
+  completed_at?: string;
+  completion_media_path?: string;
+  completion_media_type?: 'image' | 'video';
   eta_minutes?: number;
   tech_lat?: number;
   tech_lng?: number;
