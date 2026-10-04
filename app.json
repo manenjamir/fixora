@@ -20,6 +20,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
+      "bundler": "metro",
       "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
@@ -41,7 +42,21 @@
           "imageWidth": 76
         }
       ],
-      "expo-video"
+      "expo-video",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Doorstep to use your location so a technician can find the visit and you can follow their arrival."
+        }
+      ],
+      [
+        "expo-maps",
+        {
+          "requestLocationPermission": true,
+          "locationPermission": "Allow Doorstep to use your location so a technician can find the visit and you can follow their arrival."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

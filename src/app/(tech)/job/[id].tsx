@@ -4,12 +4,15 @@ import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { JobMediaPreview } from '@/components/job-media-preview';
+import { LiveMap } from '@/components/live-map';
 import { AppButton, Content, Screen, StatusChip } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
 import { getDevice } from '@/constants/devices';
 import { Spacing } from '@/constants/theme';
-import { formatRupees, REPAIR_LOCATION_COPY, TIER_COPY, useJobs, type JobMediaInput, type RepairLocation } from '@/context/job-store';
+import { formatRupees, REPAIR_LOCATION_COPY, TIER_COPY, useJobs, type Job, type JobMediaInput, type RepairLocation } from '@/context/job-store';
 import { useTheme } from '@/hooks/use-theme';
+import type { Coordinates, MapPin } from '@/lib/geo';
+import { isActiveJob } from '@/lib/job-routes';
 
 export default function TechJobScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,7 +20,7 @@ export default function TechJobScreen() {
   const theme = useTheme();
   const {
     getJob,
-    setPartsCheck,
+    deviceLocation,
     startDispatch,
     startInspection,
     sendQuote,
@@ -50,9 +53,6 @@ export default function TechJobScreen() {
   const canQuote = selectedJob.status === 'inspecting' || selectedJob.status === 'quoted';
   const canResolve = selectedJob.status === 'accepted';
   const customerDeclined = selectedJob.status === 'declined_by_customer';
-  const inStockSelected = selectedJob.partsChecked && selectedJob.partsInStock;
-  const outOfStockSelected = selectedJob.partsChecked && !selectedJob.partsInStock;
-
   const selectedLocation = repairLocation ?? selectedJob.repairLocation ?? null;
 
   async function submitQuote() {
@@ -127,6 +127,16 @@ export default function TechJobScreen() {
           <ThemedText themeColor="textSecondary">
             {selectedJob.placeTag} · {selectedJob.address}
           </ThemedText>
+          {isActiveJob(selectedJob) ? <LiveMap pins={jobPins(selectedJob, deviceLocation)} /> : null}
+          {selectedJob.deviceBrand ? (
+            <ThemedText type="smallBold">Brand · {selectedJob.deviceBrand}</ThemedText>
+          ) : null}
+          {selectedJob.customerIssue ? (
+            <>
+              <ThemedText type="smallBold">Customer reported issue</ThemedText>
+              <ThemedText themeColor="textSecondary">{selectedJob.customerIssue}</ThemedText>
+            </>
+          ) : null}
 
           <ThemedText type="smallBold">Visual pre-diagnostics</ThemedText>
           {selectedJob.mediaUri ? (
@@ -139,45 +149,8 @@ export default function TechJobScreen() {
             <ThemedText themeColor="textSecondary">No media attached. Ask on arrival if needed.</ThemedText>
           )}
 
-          <ThemedText type="smallBold">Smart inventory</ThemedText>
-          <ThemedText themeColor="textSecondary">
-            {selectedJob.partsChecked
-              ? selectedJob.partsInStock
-                ? 'Parts for this brand are in stock. Safe to confirm the visit.'
-                : 'Parts are not in van stock. Confirm only if you will pick up from warehouse first.'
-              : 'Check warehouse stock before you confirm this booking.'}
-          </ThemedText>
-          <View style={styles.row}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setPartsCheck(selectedJob.id, true)}
-              style={[
-                styles.toggle,
-                { backgroundColor: inStockSelected ? theme.accent : theme.backgroundElement },
-              ]}>
-              <ThemedText type="smallBold" style={{ color: inStockSelected ? '#ffffff' : theme.text }}>
-                In stock
-              </ThemedText>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setPartsCheck(selectedJob.id, false)}
-              style={[
-                styles.toggle,
-                { backgroundColor: outOfStockSelected ? theme.accent : theme.backgroundElement },
-              ]}>
-              <ThemedText type="smallBold" style={{ color: outOfStockSelected ? '#ffffff' : theme.text }}>
-                Not in stock
-              </ThemedText>
-            </Pressable>
-          </View>
-
           {selectedJob.status === 'requested' ? (
-            <AppButton
-              label="Confirm booking & start route"
-              disabled={!selectedJob.partsChecked}
-              onPress={() => startDispatch(selectedJob.id)}
-            />
+            <AppButton label="Confirm booking & start route" onPress={() => startDispatch(selectedJob.id)} />
           ) : null}
 
           {selectedJob.status === 'dispatched' ? (
@@ -339,6 +312,33 @@ export default function TechJobScreen() {
       </ScrollView>
     </Screen>
   );
+}
+
+function jobPins(job: Job, deviceLocation: Coordinates | null): MapPin[] {
+  const pins: MapPin[] = [];
+  if (job.customerLocation) {
+    pins.push({
+      id: 'customer',
+      latitude: job.customerLocation.lat,
+      longitude: job.customerLocation.lng,
+      title: 'Customer',
+      kind: 'customer',
+    });
+  }
+  const technician =
+    job.technician.lat != null && job.technician.lng != null
+      ? { lat: job.technician.lat, lng: job.technician.lng }
+      : deviceLocation;
+  if (technician) {
+    pins.push({
+      id: 'technician',
+      latitude: technician.lat,
+      longitude: technician.lng,
+      title: 'You',
+      kind: 'technician',
+    });
+  }
+  return pins;
 }
 
 const styles = StyleSheet.create({

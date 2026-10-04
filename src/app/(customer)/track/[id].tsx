@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 
+import { LiveMap } from '@/components/live-map';
 import { AppButton, Content, Screen, StatusChip } from '@/components/repair-ui';
-import { SimulatedMap } from '@/components/simulated-map';
 import { ThemedText } from '@/components/themed-text';
 import { getDevice } from '@/constants/devices';
 import { Spacing } from '@/constants/theme';
 import { STATUS_LABEL, useJobs } from '@/context/job-store';
+import type { MapPin } from '@/lib/geo';
 
 export default function TrackScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -23,17 +24,38 @@ export default function TrackScreen() {
   }
 
   const device = getDevice(job.category);
-  const moving = job.status === 'dispatched';
-  const mapCaption =
-    job.status === 'dispatched'
-      ? `${job.technician.etaMinutes} min away`
-      : job.status === 'accepted'
-        ? 'Repair approved — technician is working'
-        : job.status === 'inspecting'
-          ? 'Free check-up in progress'
-          : job.status === 'requested'
-            ? 'Waiting for dispatch'
-            : STATUS_LABEL[job.status];
+  const traveling = job.status === 'dispatched';
+  const hasTechnician = job.technician.lat != null && job.technician.lng != null;
+  const pins: MapPin[] = [];
+  if (job.customerLocation) {
+    pins.push({
+      id: 'customer',
+      latitude: job.customerLocation.lat,
+      longitude: job.customerLocation.lng,
+      title: 'You',
+      kind: 'customer',
+    });
+  }
+  if (hasTechnician) {
+    pins.push({
+      id: 'technician',
+      latitude: job.technician.lat!,
+      longitude: job.technician.lng!,
+      title: 'Technician',
+      kind: 'technician',
+    });
+  }
+  const mapCaption = traveling
+    ? hasTechnician && job.technician.etaMinutes
+      ? `On the way · about ${job.technician.etaMinutes} min`
+      : 'Waiting for a live location'
+    : job.status === 'accepted'
+      ? 'Repair approved — technician is working'
+      : job.status === 'inspecting'
+        ? 'Free check-up in progress'
+        : job.status === 'requested'
+          ? 'Waiting for dispatch'
+          : STATUS_LABEL[job.status];
 
   return (
     <Screen padded={false}>
@@ -41,10 +63,17 @@ export default function TrackScreen() {
         <Content>
           <ThemedText type="subtitle">{device.label}</ThemedText>
           <StatusChip status={job.status} />
-          <SimulatedMap etaMinutes={job.technician.etaMinutes} moving={moving} caption={mapCaption} />
+          <LiveMap pins={pins} caption={mapCaption} />
           <ThemedText themeColor="textSecondary">
             {job.placeTag} · {job.address}
           </ThemedText>
+          {job.deviceBrand || job.customerIssue ? (
+            <ThemedText themeColor="textSecondary">
+              {job.deviceBrand ? `${job.deviceBrand}` : ''}
+              {job.deviceBrand && job.customerIssue ? ' · ' : ''}
+              {job.customerIssue ?? ''}
+            </ThemedText>
+          ) : null}
           {job.status === 'quoted' ? (
             <AppButton label="See repair estimate" onPress={() => router.push(`/(customer)/estimate/${job.id}`)} />
           ) : null}

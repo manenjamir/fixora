@@ -44,6 +44,23 @@ export default function PastRepairScreen() {
             <ThemedText type="smallBold">{formatWhen(job.completedAt ?? job.updatedAt)}</ThemedText>
           </View>
 
+          {job.deviceBrand ? (
+            <View style={styles.block}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Device brand
+              </ThemedText>
+              <ThemedText type="smallBold">{job.deviceBrand}</ThemedText>
+            </View>
+          ) : null}
+          {job.customerIssue ? (
+            <View style={styles.block}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Reported issue
+              </ThemedText>
+              <ThemedText type="smallBold">{job.customerIssue}</ThemedText>
+            </View>
+          ) : null}
+
           <View style={styles.block}>
             <ThemedText type="small" themeColor="textSecondary">
               Repair location

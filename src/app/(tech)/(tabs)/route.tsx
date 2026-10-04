@@ -1,30 +1,60 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Content, TabScreen } from '@/components/repair-ui';
+import { LiveMap } from '@/components/live-map';
+import { Content, TabScreen, TabScrollView } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
 import { getDevice } from '@/constants/devices';
 import { Spacing } from '@/constants/theme';
 import { STATUS_LABEL, useJobs } from '@/context/job-store';
 import { useTheme } from '@/hooks/use-theme';
+import { distanceMeters, etaMinutes, type MapPin } from '@/lib/geo';
 
 export default function TechRouteScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { jobs } = useJobs();
+  const { jobs, deviceLocation } = useJobs();
   const stops = jobs
-    .filter((job) => ['requested', 'dispatched', 'inspecting', 'accepted', 'warehouse'].includes(job.status))
-    .sort((a, b) => a.technician.etaMinutes - b.technician.etaMinutes);
+    .filter((job) => ['requested', 'dispatched', 'inspecting', 'accepted', 'warehouse', 'out_for_delivery'].includes(job.status))
+    .sort((a, b) => {
+      if (!deviceLocation) return a.createdAt - b.createdAt;
+      const distance = (job: (typeof jobs)[number]) =>
+        job.customerLocation ? distanceMeters(deviceLocation, job.customerLocation) : Number.POSITIVE_INFINITY;
+      return distance(a) - distance(b);
+    });
+  const pins: MapPin[] = [];
+  if (deviceLocation) {
+    pins.push({
+      id: 'you',
+      latitude: deviceLocation.lat,
+      longitude: deviceLocation.lng,
+      title: 'You',
+      kind: 'technician',
+    });
+  }
+  for (const job of stops) {
+    if (!job.customerLocation) continue;
+    pins.push({
+      id: job.id,
+      latitude: job.customerLocation.lat,
+      longitude: job.customerLocation.lng,
+      title: job.placeTag,
+      kind: 'stop',
+    });
+  }
 
   return (
     <TabScreen>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <TabScrollView>
         <Content>
           <ThemedText type="subtitle">Optimized route</ThemedText>
           <ThemedText themeColor="textSecondary">
-            Stops are ordered by ETA so you spend less fuel between hostels, colleges, and hospitals.
+            {deviceLocation
+              ? 'Stops are ordered by distance from your current location.'
+              : 'Turn on location to order stops by distance.'}
           </ThemedText>
+          <LiveMap pins={pins} caption={deviceLocation ? 'Your route' : 'Waiting for a live location'} />
           {stops.length === 0 ? (
             <ThemedText themeColor="textSecondary">No stops on the route yet.</ThemedText>
           ) : (
@@ -46,7 +76,10 @@ export default function TechRouteScreen() {
                       {job.address}
                     </ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
-                      {STATUS_LABEL[job.status]} · {job.technician.etaMinutes} min
+                      {STATUS_LABEL[job.status]}
+                      {deviceLocation && job.customerLocation
+                        ? ` · ${etaMinutes(distanceMeters(deviceLocation, job.customerLocation))} min`
+                        : ''}
                     </ThemedText>
                   </View>
                   <Ionicons name="navigate-outline" size={20} color={theme.accent} />
@@ -55,7 +88,7 @@ export default function TechRouteScreen() {
             })
           )}
         </Content>
-      </ScrollView>
+      </TabScrollView>
     </TabScreen>
   );
 }

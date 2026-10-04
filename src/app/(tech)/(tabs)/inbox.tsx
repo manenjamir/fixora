@@ -1,7 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ScrollView } from 'react-native';
-
-import { Content, JobRow, TabScreen } from '@/components/repair-ui';
+import { Content, JobRow, TabScreen, TabScrollView } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
 import { groupForCategory } from '@/constants/devices';
 import { useAuth } from '@/context/auth';
@@ -22,11 +20,11 @@ export default function TechJobsScreen() {
 
   return (
     <TabScreen>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <TabScrollView>
         <Content>
           <ThemedText type="subtitle">Incoming jobs</ThemedText>
           <ThemedText themeColor="textSecondary">
-            Open a job for photos, stock check, quoting, and resolution.
+            Open a job for photos, quoting, and resolution.
           </ThemedText>
           {openJobs.length === 0 ? (
             <ThemedText themeColor="textSecondary">No open requests right now.</ThemedText>
@@ -36,7 +34,7 @@ export default function TechJobsScreen() {
             ))
           )}
         </Content>
-      </ScrollView>
+      </TabScrollView>
     </TabScreen>
   );
 }

@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
-import { Content, JobRow, TabScreen } from '@/components/repair-ui';
+import { Content, JobRow, TabScreen, TabScrollView } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useJobs } from '@/context/job-store';
@@ -15,7 +15,7 @@ export default function CustomerJobsScreen() {
 
   return (
     <TabScreen>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <TabScrollView>
         <Content>
           <ThemedText type="subtitle">Bookings</ThemedText>
           {active.length === 0 ? (
@@ -36,7 +36,7 @@ export default function CustomerJobsScreen() {
             </>
           ) : null}
         </Content>
-      </ScrollView>
+      </TabScrollView>
     </TabScreen>
   );
 }

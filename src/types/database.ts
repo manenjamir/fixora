@@ -22,14 +22,16 @@ export type Database = {
           completion_media_type: string | null
           created_at: string
           customer_id: string
+          customer_issue: string | null
+          customer_lat: number | null
+          customer_lng: number | null
+          device_brand: string | null
           diagnosis: string | null
           eta_minutes: number | null
           estimated_completion: string
           id: string
           media_path: string | null
           media_type: string | null
-          parts_checked: boolean
-          parts_in_stock: boolean
           place_tag: string
           price_a1: number | null
           repair_location: string | null
@@ -50,14 +52,16 @@ export type Database = {
           completion_media_type?: string | null
           created_at?: string
           customer_id: string
+          customer_issue?: string | null
+          customer_lat?: number | null
+          customer_lng?: number | null
+          device_brand?: string | null
           diagnosis?: string | null
           eta_minutes?: number | null
           estimated_completion?: string
           id?: string
           media_path?: string | null
           media_type?: string | null
-          parts_checked?: boolean
-          parts_in_stock?: boolean
           place_tag: string
           price_a1?: number | null
           repair_location?: string | null
@@ -78,14 +82,16 @@ export type Database = {
           completion_media_type?: string | null
           created_at?: string
           customer_id?: string
+          customer_issue?: string | null
+          customer_lat?: number | null
+          customer_lng?: number | null
+          device_brand?: string | null
           diagnosis?: string | null
           eta_minutes?: number | null
           estimated_completion?: string
           id?: string
           media_path?: string | null
           media_type?: string | null
-          parts_checked?: boolean
-          parts_in_stock?: boolean
           place_tag?: string
           price_a1?: number | null
           repair_location?: string | null
@@ -147,6 +153,15 @@ export type Database = {
     }
     Functions: {
       is_technician: { Args: never; Returns: boolean }
+      update_tech_location: {
+        Args: {
+          job_id: string
+          lat: number
+          lng: number
+          eta_minutes?: number | null
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

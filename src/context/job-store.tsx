@@ -1,7 +1,9 @@
+import * as Location from 'expo-location';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/context/auth';
 import type { DeviceCategoryId, PlaceTag } from '@/constants/devices';
+import { distanceMeters, etaMinutes, type Coordinates } from '@/lib/geo';
 import { readFileBytes } from '@/lib/read-file';
 import { supabase } from '@/lib/supabase';
 import type { JobRow } from '@/types/database';
@@ -63,10 +65,11 @@ export type Job = {
   tiers?: JobTiers;
   chosenTier?: RepairTier;
   repairLocation?: RepairLocation;
+  customerIssue?: string;
+  deviceBrand?: string;
   estimatedCompletion: string;
-  partsInStock: boolean;
-  partsChecked: boolean;
-  technician: { lat: number; lng: number; etaMinutes: number };
+  customerLocation?: Coordinates;
+  technician: { lat?: number; lng?: number; etaMinutes?: number };
   createdAt: number;
   updatedAt: number;
   completedAt?: number;
@@ -79,14 +82,17 @@ type CreateJobInput = {
   mediaBase64?: string;
   placeTag: PlaceTag;
   address: string;
+  customerIssue: string;
+  deviceBrand: string;
+  customerLocation?: Coordinates;
 };
 
 type JobContextValue = {
   role: AppRole | null;
+  deviceLocation: Coordinates | null;
   jobs: Job[];
   getJob: (id: string) => Job | undefined;
   createJob: (input: CreateJobInput) => Promise<Job>;
-  setPartsCheck: (id: string, inStock: boolean) => Promise<void>;
   startDispatch: (id: string) => Promise<void>;
   startInspection: (id: string) => Promise<void>;
   sendQuote: (id: string, diagnosis: string, tiers: JobTiers, repairLocation: RepairLocation) => Promise<void>;
@@ -180,17 +186,60 @@ async function mapRow(row: JobRow): Promise<Job> {
     tiers,
     chosenTier: row.chosen_tier === 'a1' || row.chosen_tier === 'a2' || row.chosen_tier === 'a3' ? row.chosen_tier : undefined,
     repairLocation: isRepairLocation(row.repair_location) ? row.repair_location : undefined,
+    customerIssue: row.customer_issue ?? undefined,
+    deviceBrand: row.device_brand ?? undefined,
     estimatedCompletion: row.estimated_completion || '1-2 days',
-    partsInStock: row.parts_in_stock,
-    partsChecked: row.parts_checked,
+    customerLocation:
+      row.customer_lat != null && row.customer_lng != null
+        ? { lat: row.customer_lat, lng: row.customer_lng }
+        : undefined,
     technician: {
-      lat: row.tech_lat ?? 28.52,
-      lng: row.tech_lng ?? 77.38,
-      etaMinutes: row.eta_minutes ?? 22,
+      lat: row.tech_lat ?? undefined,
+      lng: row.tech_lng ?? undefined,
+      etaMinutes: row.eta_minutes ?? undefined,
     },
     createdAt: new Date(row.created_at).getTime(),
     updatedAt: new Date(row.updated_at).getTime(),
     completedAt: row.completed_at ? new Date(row.completed_at).getTime() : undefined,
+  };
+}
+
+function sameAsideFromLocation(job: Job, row: JobRow) {
+  const status = isJobStatus(row.status) ? row.status : job.status;
+  const tier =
+    row.chosen_tier === 'a1' || row.chosen_tier === 'a2' || row.chosen_tier === 'a3' ? row.chosen_tier : undefined;
+  return (
+    job.status === status &&
+    job.address === row.address &&
+    job.placeTag === row.place_tag &&
+    (job.diagnosis ?? null) === (row.diagnosis ?? null) &&
+    (job.technicianId ?? null) === (row.technician_id ?? null) &&
+    (job.chosenTier ?? null) === (tier ?? null) &&
+    (job.repairLocation ?? null) === (isRepairLocation(row.repair_location) ? row.repair_location : null) &&
+    (job.mediaPath ?? null) === (row.media_path ?? null) &&
+    (job.customerIssue ?? null) === (row.customer_issue ?? null) &&
+    (job.deviceBrand ?? null) === (row.device_brand ?? null) &&
+    (job.tiers?.a1 ?? null) === (row.price_a1 == null ? null : Number(row.price_a1)) &&
+    (job.tiers?.a2 ?? null) === (row.price_a2 == null ? null : Number(row.price_a2)) &&
+    (job.tiers?.a3 ?? null) === (row.price_a3 == null ? null : Number(row.price_a3)) &&
+    (job.completedAt ?? null) === (row.completed_at ? new Date(row.completed_at).getTime() : null) &&
+    job.estimatedCompletion === row.estimated_completion
+  );
+}
+
+function withLocation(job: Job, row: JobRow): Job {
+  return {
+    ...job,
+    customerLocation:
+      row.customer_lat != null && row.customer_lng != null
+        ? { lat: row.customer_lat, lng: row.customer_lng }
+        : undefined,
+    technician: {
+      lat: row.tech_lat ?? undefined,
+      lng: row.tech_lng ?? undefined,
+      etaMinutes: row.eta_minutes ?? undefined,
+    },
+    updatedAt: new Date(row.updated_at).getTime(),
   };
 }
 
@@ -224,6 +273,7 @@ async function uploadMedia(
 export function JobProvider({ children }: { children: ReactNode }) {
   const { session, profile } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [deviceLocation, setDeviceLocation] = useState<Coordinates | null>(null);
   const jobsRef = useRef(jobs);
   jobsRef.current = jobs;
   const role = (profile?.role === 'tech' || profile?.role === 'customer' ? profile.role : null) as AppRole | null;
@@ -247,7 +297,13 @@ export function JobProvider({ children }: { children: ReactNode }) {
     if (!session) return;
     const channel = supabase
       .channel('jobs-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, (payload) => {
+        const row = payload.new as JobRow | null;
+        const current = row ? jobsRef.current.find((job) => job.id === row.id) : undefined;
+        if (payload.eventType === 'UPDATE' && row && current && sameAsideFromLocation(current, row)) {
+          setJobs((previous) => previous.map((job) => (job.id === row.id ? withLocation(job, row) : job)));
+          return;
+        }
         refreshJobs().catch(() => undefined);
       })
       .subscribe();
@@ -257,24 +313,68 @@ export function JobProvider({ children }: { children: ReactNode }) {
   }, [session, refreshJobs]);
 
   useEffect(() => {
-    if (role !== 'tech') return;
-    const timer = setInterval(async () => {
-      const moving = jobsRef.current.filter((job) => job.status === 'dispatched' && job.technician.etaMinutes > 1);
-      await Promise.all(
-        moving.map((job) =>
-          supabase
-            .from('jobs')
-            .update({
-              tech_lat: job.technician.lat + 0.0012,
-              tech_lng: job.technician.lng + 0.0008,
-              eta_minutes: job.technician.etaMinutes - 1,
-            })
-            .eq('id', job.id),
-        ),
-      );
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [role]);
+    if (role !== 'tech' || !session?.user.id) {
+      setDeviceLocation(null);
+      return;
+    }
+
+    const userId = session.user.id;
+    let subscription: Location.LocationSubscription | undefined;
+    let cancelled = false;
+    let lastSentAt = 0;
+    let lastLat: number | undefined;
+    let lastLng: number | undefined;
+
+    Location.requestForegroundPermissionsAsync()
+      .then((permission) => {
+        if (!permission.granted || cancelled) return;
+        return Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.Balanced, timeInterval: 5000, distanceInterval: 15 },
+          (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            setDeviceLocation({ lat, lng });
+            const moved =
+              lastLat == null || lastLng == null ? Number.POSITIVE_INFINITY : distanceMeters({ lat: lastLat, lng: lastLng }, { lat, lng });
+            if (lastSentAt !== 0 && Date.now() - lastSentAt < 10_000 && moved < 25) return;
+
+            const traveling = jobsRef.current.filter(
+              (job) =>
+                job.technicianId === userId && (job.status === 'dispatched' || job.status === 'out_for_delivery'),
+            );
+            if (traveling.length === 0) return;
+
+            lastSentAt = Date.now();
+            lastLat = lat;
+            lastLng = lng;
+            for (const job of traveling) {
+              const minutes = job.customerLocation
+                ? etaMinutes(distanceMeters({ lat, lng }, job.customerLocation))
+                : null;
+              void supabase.rpc('update_tech_location', {
+                job_id: job.id,
+                lat,
+                lng,
+                eta_minutes: minutes,
+              });
+            }
+          },
+        );
+      })
+      .then((next) => {
+        if (cancelled) {
+          next?.remove();
+          return;
+        }
+        subscription = next;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+      subscription?.remove();
+    };
+  }, [role, session?.user.id]);
 
   const getJob = useCallback((id: string) => jobs.find((job) => job.id === id), [jobs]);
 
@@ -294,10 +394,11 @@ export function JobProvider({ children }: { children: ReactNode }) {
           category: input.category,
           place_tag: input.placeTag,
           address: input.address,
+          customer_issue: input.customerIssue,
+          device_brand: input.deviceBrand,
+          customer_lat: input.customerLocation?.lat,
+          customer_lng: input.customerLocation?.lng,
           status: 'requested',
-          tech_lat: 28.52,
-          tech_lng: 77.38,
-          eta_minutes: 22,
           estimated_completion: '1-2 days',
         })
         .select('*')
@@ -327,17 +428,11 @@ export function JobProvider({ children }: { children: ReactNode }) {
     [refreshJobs, session?.user.id],
   );
 
-  const setPartsCheck = useCallback(
-    (id: string, inStock: boolean) => updateJob(id, { parts_checked: true, parts_in_stock: inStock }),
-    [updateJob],
-  );
-
   const startDispatch = useCallback(
     (id: string) =>
       updateJob(id, {
         status: 'dispatched',
         technician_id: session?.user.id,
-        eta_minutes: 20,
       }),
     [session?.user.id, updateJob],
   );
@@ -415,10 +510,10 @@ export function JobProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       role,
+      deviceLocation,
       jobs,
       getJob,
       createJob,
-      setPartsCheck,
       startDispatch,
       startInspection,
       sendQuote,
@@ -431,10 +526,10 @@ export function JobProvider({ children }: { children: ReactNode }) {
     }),
     [
       role,
+      deviceLocation,
       jobs,
       getJob,
       createJob,
-      setPartsCheck,
       startDispatch,
       startInspection,
       sendQuote,
@@ -453,8 +548,6 @@ export function JobProvider({ children }: { children: ReactNode }) {
 type DatabaseUpdate = {
   status?: JobStatus;
   technician_id?: string;
-  parts_checked?: boolean;
-  parts_in_stock?: boolean;
   diagnosis?: string;
   price_a1?: number;
   price_a2?: number;
@@ -464,9 +557,6 @@ type DatabaseUpdate = {
   completed_at?: string;
   completion_media_path?: string;
   completion_media_type?: 'image' | 'video';
-  eta_minutes?: number;
-  tech_lat?: number;
-  tech_lng?: number;
   media_path?: string;
   media_type?: 'image' | 'video';
 };
