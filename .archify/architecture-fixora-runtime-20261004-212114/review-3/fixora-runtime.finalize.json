@@ -1,0 +1,295 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "startedAt": "2026-10-04T15:53:46.793Z",
+  "specification": {
+    "path": "C:\\START UP (APP)\\App\\.archify\\architecture-fixora-runtime-20261004-212114\\candidate.json",
+    "sha256": "85de648129d74837de0877aa6ac962f067179fd5f8b9edf678d20dbf15e25efb",
+    "bytes": 5377
+  },
+  "artifact": {
+    "path": "C:\\START UP (APP)\\App\\.archify\\architecture-fixora-runtime-20261004-212114\\fixora-runtime.html",
+    "sha256": "759b50e97993172e3cfd753ff44c960c8be69a2a3f58cb3d9270b345961be151",
+    "bytes": 767335
+  },
+  "stages": {
+    "validate": {
+      "status": "fail",
+      "exitCode": 1,
+      "durationMs": null,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\START UP (APP)\\App\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "architecture",
+        "C:\\START UP (APP)\\App\\.archify\\architecture-fixora-runtime-20261004-212114\\candidate.json",
+        "C:\\START UP (APP)\\App\\.archify\\architecture-fixora-runtime-20261004-212114\\fixora-runtime.html",
+        "--quality",
+        "showcase",
+        "--repo-root",
+        "C:\\START UP (APP)\\App",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": false,
+        "command": "deliver",
+        "receiptId": "e9b8340f-4a8b-4f08-b946-72698c2b75a0",
+        "stage": "render",
+        "type": "architecture",
+        "input": "C:\\START UP (APP)\\App\\.archify\\architecture-fixora-runtime-20261004-212114\\candidate.json",
+        "output": "C:\\START UP (APP)\\App\\.archify\\architecture-fixora-runtime-20261004-212114\\fixora-runtime.html",
+        "error": "Architecture layout validation failed:\n- Boundary label \"Supabase project\" extends outside the viewBox — move wrapped components away from the canvas edge, shorten the label, or increase the viewBox.\n- Boundary \"Supabase project\" extends outside the viewBox (top by 6px) — preserve wraps membership and repair the measured canvas side.",
+        "diagnostics": [
+          {
+            "code": "layout/constraint",
+            "severity": "error",
+            "message": "Boundary label \"Supabase project\" extends outside the viewBox — move wrapped components away from the canvas edge, shorten the label, or increase the viewBox.",
+            "subject": {
+              "diagramType": "architecture"
+            },
+            "evidence": {},
+            "supportedFixes": []
+          },
+          {
+            "code": "layout/boundary-out-of-bounds",
+            "severity": "error",
+            "message": "Boundary \"Supabase project\" extends outside the viewBox (top by 6px) — preserve wraps membership and repair the measured canvas side.",
+            "subject": {
+              "diagramType": "architecture",
+              "boundary": {
+                "kind": "security-group",
+                "label": "Supabase project",
+                "wraps": [
+                  "auth",
+                  "postgres",
+                  "realtime",
+                  "storage"
+                ]
+              }
+            },
+            "evidence": {
+              "bounds": {
+                "x": 6,
+                "y": -6,
+                "width": 974,
+                "height": 560
+              },
+              "viewBox": [
+                1020,
+                622
+              ],
+              "overflow": {
+                "left": 0,
+                "top": 6,
+                "right": 0,
+                "bottom": 0
+              },
+              "members": [
+                {
+                  "id": "auth",
+                  "type": "security",
+                  "label": "Supabase Auth",
+                  "x": 36,
+                  "y": 470,
+                  "width": 170,
+                  "height": 64,
+                  "pos": [
+                    36,
+                    470
+                  ]
+                },
+                {
+                  "id": "postgres",
+                  "type": "database",
+                  "label": "Postgres",
+                  "x": 760,
+                  "y": 220,
+                  "width": 190,
+                  "height": 90,
+                  "pos": [
+                    760,
+                    220
+                  ]
+                },
+                {
+                  "id": "realtime",
+                  "type": "messagebus",
+                  "label": "Realtime",
+                  "x": 770,
+                  "y": 36,
+                  "width": 170,
+                  "height": 64,
+                  "pos": [
+                    770,
+                    36
+                  ]
+                },
+                {
+                  "id": "storage",
+                  "type": "cloud",
+                  "label": "Storage",
+                  "x": 760,
+                  "y": 456,
+                  "width": 190,
+                  "height": 64,
+                  "pos": [
+                    760,
+                    456
+                  ]
+                }
+              ]
+            },
+            "supportedFixes": [
+              "move the wrapped components right by at least 0px and down by at least 6px, then revalidate connected routes and the opposite canvas sides; enlarging meta.viewBox cannot fix left/top overflow"
+            ]
+          }
+        ],
+        "provenance": "failed",
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      },
+      "execution": "embedded-in-deliver"
+    },
+    "deliver": {
+      "status": "not-run",
+      "execution": "blocked-by-validate"
+    }
+  },
+  "diagnostics": [
+    {
+      "code": "layout/constraint",
+      "severity": "error",
+      "message": "Boundary label \"Supabase project\" extends outside the viewBox — move wrapped components away from the canvas edge, shorten the label, or increase the viewBox.",
+      "subject": {
+        "diagramType": "architecture"
+      },
+      "evidence": {},
+      "supportedFixes": []
+    },
+    {
+      "code": "layout/boundary-out-of-bounds",
+      "severity": "error",
+      "message": "Boundary \"Supabase project\" extends outside the viewBox (top by 6px) — preserve wraps membership and repair the measured canvas side.",
+      "subject": {
+        "diagramType": "architecture",
+        "boundary": {
+          "kind": "security-group",
+          "label": "Supabase project",
+          "wraps": [
+            "auth",
+            "postgres",
+            "realtime",
+            "storage"
+          ]
+        }
+      },
+      "evidence": {
+        "bounds": {
+          "x": 6,
+          "y": -6,
+          "width": 974,
+          "height": 560
+        },
+        "viewBox": [
+          1020,
+          622
+        ],
+        "overflow": {
+          "left": 0,
+          "top": 6,
+          "right": 0,
+          "bottom": 0
+        },
+        "members": [
+          {
+            "id": "auth",
+            "type": "security",
+            "label": "Supabase Auth",
+            "x": 36,
+            "y": 470,
+            "width": 170,
+            "height": 64,
+            "pos": [
+              36,
+              470
+            ]
+          },
+          {
+            "id": "postgres",
+            "type": "database",
+            "label": "Postgres",
+            "x": 760,
+            "y": 220,
+            "width": 190,
+            "height": 90,
+            "pos": [
+              760,
+              220
+            ]
+          },
+          {
+            "id": "realtime",
+            "type": "messagebus",
+            "label": "Realtime",
+            "x": 770,
+            "y": 36,
+            "width": 170,
+            "height": 64,
+            "pos": [
+              770,
+              36
+            ]
+          },
+          {
+            "id": "storage",
+            "type": "cloud",
+            "label": "Storage",
+            "x": 760,
+            "y": 456,
+            "width": 190,
+            "height": 64,
+            "pos": [
+              760,
+              456
+            ]
+          }
+        ]
+      },
+      "supportedFixes": [
+        "move the wrapped components right by at least 0px and down by at least 6px, then revalidate connected routes and the opposite canvas sides; enlarging meta.viewBox cannot fix left/top overflow"
+      ]
+    }
+  ],
+  "evidence": {
+    "receipt": "C:\\START UP (APP)\\App\\.archify\\architecture-fixora-runtime-20261004-212114\\review-3\\fixora-runtime.finalize.json",
+    "summaryReceipt": "C:\\START UP (APP)\\App\\.archify\\architecture-fixora-runtime-20261004-212114\\review-3\\fixora-runtime.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "failedStage": "validate",
+  "finishedAt": "2026-10-04T15:53:49.830Z",
+  "durationMs": 3037,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.0.1",
+    "availableVersion": "3.0.1",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-04T15:52:09.778Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}

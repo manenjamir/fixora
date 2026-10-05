@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Fixora runtime",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": ".archify/architecture-fixora-runtime-20261004-212114/fixora-runtime.html",
+    "repository": {
+      "url": "https://github.com/manenjamir/fixora.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "6062814d3aadf34b921a3f18ab1cc97cefee0ac3"
+    }
+  },
+  "components": [
+    {
+      "id": "customer",
+      "type": "external",
+      "label": "Customer",
+      "sublabel": "books and tracks",
+      "pos": [36, 168],
+      "size": [150, 64],
+      "sources": [{ "path": "src/app/(customer)/book/[category].tsx", "line": 122, "end_line": 131 }]
+    },
+    {
+      "id": "technician",
+      "type": "external",
+      "label": "Technician",
+      "sublabel": "route and job",
+      "pos": [36, 328],
+      "size": [150, 64],
+      "sources": [{ "path": "src/app/(tech)/(tabs)/route.tsx", "line": 57, "end_line": 57 }]
+    },
+    {
+      "id": "app",
+      "type": "frontend",
+      "label": "Fixora app",
+      "sublabel": "Expo Router",
+      "pos": [250, 200],
+      "size": [300, 140],
+      "sources": [
+        { "path": "src/app/_layout.tsx", "line": 23, "end_line": 31 },
+        { "path": "src/context/job-store.tsx", "line": 390, "end_line": 405 }
+      ]
+    },
+    {
+      "id": "gps",
+      "type": "external",
+      "label": "Device GPS",
+      "sublabel": "expo-location",
+      "pos": [250, 36],
+      "size": [140, 64],
+      "sources": [
+        { "path": "src/app/(customer)/book/[category].tsx", "line": 113, "end_line": 117 },
+        { "path": "src/context/job-store.tsx", "line": 328, "end_line": 354 }
+      ]
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "Supabase Auth",
+      "sublabel": "phone OTP",
+      "pos": [250, 456],
+      "size": [180, 64],
+      "sources": [
+        { "path": "src/context/auth.tsx", "line": 82, "end_line": 98 },
+        { "path": "src/lib/supabase.ts", "line": 33, "end_line": 39 }
+      ]
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "Postgres",
+      "sublabel": "jobs and profiles",
+      "pos": [760, 220],
+      "size": [190, 90],
+      "sources": [
+        { "path": "supabase/migrations/20260914120000_init.sql", "line": 21, "end_line": 57 },
+        { "path": "supabase/migrations/20260930001500_job_customer_coordinates_and_tech_location.sql", "line": 30, "end_line": 56 }
+      ]
+    },
+    {
+      "id": "realtime",
+      "type": "messagebus",
+      "label": "Realtime",
+      "sublabel": "jobs changes",
+      "pos": [770, 36],
+      "size": [170, 64],
+      "sources": [
+        { "path": "supabase/migrations/20260914120000_init.sql", "line": 200, "end_line": 200 },
+        { "path": "src/context/job-store.tsx", "line": 296, "end_line": 309 }
+      ]
+    },
+    {
+      "id": "storage",
+      "type": "cloud",
+      "label": "Storage",
+      "sublabel": "job-media bucket",
+      "pos": [760, 456],
+      "size": [190, 64],
+      "sources": [
+        { "path": "supabase/migrations/20260914120000_init.sql", "line": 169, "end_line": 171 },
+        { "path": "src/context/job-store.tsx", "line": 265, "end_line": 270 }
+      ]
+    },
+    {
+      "id": "maps",
+      "type": "cloud",
+      "label": "Device maps",
+      "sublabel": "Apple or Google",
+      "pos": [420, 36],
+      "size": [130, 64],
+      "sources": [{ "path": "src/components/live-map.tsx", "line": 32, "end_line": 39 }]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Phones",
+      "wraps": ["customer", "technician", "app", "gps"]
+    },
+    {
+      "kind": "security-group",
+      "label": "Supabase project",
+      "wraps": ["auth", "postgres", "realtime", "storage"]
+    }
+  ],
+  "connections": [
+    { "id": "customer-books", "from": "customer", "to": "app", "label": "book and track", "variant": "emphasis" },
+    { "id": "tech-works", "from": "technician", "to": "app", "label": "route and job" },
+    { "id": "app-reads-gps", "from": "app", "to": "gps", "label": "read location" },
+    { "id": "app-signs-in", "from": "app", "to": "auth", "label": "phone OTP", "variant": "security" },
+    { "id": "app-writes-jobs", "from": "app", "to": "postgres", "label": "read and write jobs", "variant": "emphasis" },
+    { "id": "app-uploads", "from": "app", "to": "storage", "label": "upload media", "variant": "dashed" },
+    { "id": "app-subscribes", "from": "app", "to": "realtime", "label": "subscribe" },
+    { "id": "jobs-published", "from": "postgres", "to": "realtime", "label": "jobs publication" },
+    { "id": "app-draws-map", "from": "app", "to": "maps", "label": "draw pins" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Booking",
+      "items": [
+        "Customer sends issue, brand, and optional GPS",
+        "Job row is inserted with status requested"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Live location",
+      "items": [
+        "Technician GPS is sent only while dispatched or out for delivery",
+        "update_tech_location writes coordinates the customer cannot set directly"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Maps",
+      "items": [
+        "Pins render with Apple Maps or Google Maps",
+        "Android needs the Maps key inside the installed app"
+      ]
+    }
+  ]
+}

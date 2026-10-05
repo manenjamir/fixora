@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "8033cd68-13e7-418e-b1d7-043f2acbf207",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\START UP (APP)\\App\\.archify\\architecture-fixora-runtime-20261004-212114\\candidate.json",
+  "output": "C:\\START UP (APP)\\App\\.archify\\architecture-fixora-runtime-20261004-212114\\fixora-runtime.html",
+  "specification": {
+    "sha256": "8db334ce2cfdd971ee91f285266fb33a40ed2c7afdbb8f2150c8c89a6f6b9ae0",
+    "bytes": 5379
+  },
+  "artifact": {
+    "sha256": "759b50e97993172e3cfd753ff44c960c8be69a2a3f58cb3d9270b345961be151",
+    "bytes": 767335
+  }
+}
