@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { JobMediaPreview } from '@/components/job-media-preview';
 import { LiveMap } from '@/components/live-map';
@@ -10,6 +10,9 @@ import { ThemedText } from '@/components/themed-text';
 import { getDevice } from '@/constants/devices';
 import { Spacing } from '@/constants/theme';
 import { formatRupees, REPAIR_LOCATION_COPY, TIER_COPY, useJobs, type Job, type JobMediaInput, type RepairLocation } from '@/context/job-store';
+import { formatPreferredAt } from '@/lib/schedule';
+import { formatPhone } from '@/lib/phone';
+import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/hooks/use-theme';
 import type { Coordinates, MapPin } from '@/lib/geo';
 import { isActiveJob } from '@/lib/job-routes';
@@ -21,7 +24,7 @@ export default function TechJobScreen() {
   const {
     getJob,
     deviceLocation,
-    startDispatch,
+    acceptJob,
     startInspection,
     sendQuote,
     resolveJob,
@@ -39,6 +42,23 @@ export default function TechJobScreen() {
   const [completionMedia, setCompletionMedia] = useState<JobMediaInput>();
   const [sendingQuote, setSendingQuote] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [contact, setContact] = useState<{ name?: string; phone?: string }>({});
+
+  useEffect(() => {
+    if (!job?.customerId) return;
+    let cancelled = false;
+    supabase
+      .from('profiles')
+      .select('full_name, phone')
+      .eq('id', job.customerId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data) setContact({ name: data.full_name ?? undefined, phone: data.phone ?? undefined });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [job?.customerId]);
 
   if (!job) {
     return (
@@ -127,6 +147,30 @@ export default function TechJobScreen() {
           <ThemedText themeColor="textSecondary">
             {selectedJob.placeTag} · {selectedJob.address}
           </ThemedText>
+          <ThemedText themeColor="textSecondary">{formatPreferredAt(selectedJob.preferredAt)}</ThemedText>
+          {contact.name || contact.phone ? (
+            <ThemedText themeColor="textSecondary">
+              {contact.name || 'Customer'}
+              {contact.phone ? ` · ${formatPhone(contact.phone)}` : ''}
+            </ThemedText>
+          ) : null}
+          <View style={styles.row}>
+            <AppButton
+              label="Navigate"
+              variant="secondary"
+              onPress={() => {
+                if (selectedJob.customerLocation) {
+                  const { lat, lng } = selectedJob.customerLocation;
+                  Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
+                  return;
+                }
+                Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedJob.address)}`);
+              }}
+            />
+            {contact.phone ? (
+              <AppButton label="Call customer" variant="secondary" onPress={() => Linking.openURL(`tel:${contact.phone}`)} />
+            ) : null}
+          </View>
           {isActiveJob(selectedJob) ? <LiveMap pins={jobPins(selectedJob, deviceLocation)} /> : null}
           {selectedJob.deviceBrand ? (
             <ThemedText type="smallBold">Brand · {selectedJob.deviceBrand}</ThemedText>
@@ -150,7 +194,16 @@ export default function TechJobScreen() {
           )}
 
           {selectedJob.status === 'requested' ? (
-            <AppButton label="Confirm booking & start route" onPress={() => startDispatch(selectedJob.id)} />
+            <AppButton
+              label="Accept job"
+              onPress={async () => {
+                try {
+                  await acceptJob(selectedJob.id);
+                } catch (error) {
+                  Alert.alert('Could not accept this job', error instanceof Error ? error.message : 'Try again');
+                }
+              }}
+            />
           ) : null}
 
           {selectedJob.status === 'dispatched' ? (

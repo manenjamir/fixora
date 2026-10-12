@@ -14,6 +14,7 @@ import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChoiceChip, SectionCard } from '@/components/booking-section';
+import { PreferredTimePicker } from '@/components/preferred-time-picker';
 import { AppButton } from '@/components/repair-ui';
 import { getBrandsForCategory, OTHER_BRAND } from '@/constants/device-brands';
 import { getDevice, PLACE_TAGS, type PlaceTag } from '@/constants/devices';
@@ -35,6 +36,7 @@ export default function BookScreen() {
   const [customBrand, setCustomBrand] = useState('');
   const [placeTag, setPlaceTag] = useState<PlaceTag>('Home');
   const [address, setAddress] = useState('');
+  const [preferredAt, setPreferredAt] = useState<Date | null>(null);
   const [mediaUri, setMediaUri] = useState<string>();
   const [mediaType, setMediaType] = useState<'image' | 'video'>();
   const [mediaBase64, setMediaBase64] = useState<string>();
@@ -99,10 +101,6 @@ export default function BookScreen() {
     setError(null);
     const issue = customerIssue.trim();
     const brand = resolvedBrand();
-    if (!issue) {
-      setError('Describe what is wrong with your device.');
-      return;
-    }
     if (!brand) {
       setError(selectedBrand === OTHER_BRAND ? 'Enter your device brand.' : 'Select a device brand.');
       return;
@@ -121,7 +119,7 @@ export default function BookScreen() {
       }
       const job = await createJob({
         category: device.id,
-        customerIssue: issue,
+        customerIssue: issue || undefined,
         deviceBrand: brand,
         mediaUri,
         mediaType,
@@ -129,6 +127,7 @@ export default function BookScreen() {
         placeTag,
         address: address.trim() || `${placeTag} location`,
         customerLocation,
+        preferredAt: preferredAt?.toISOString(),
       });
       router.replace(`/(customer)/track/${job.id}`);
     } catch (err) {
@@ -189,7 +188,7 @@ export default function BookScreen() {
             </Pressable>
           </SectionCard>
 
-          <SectionCard title="What's the problem?" hint="Be specific so the technician can prepare.">
+          <SectionCard title="What's the problem?" hint="Optional. Be specific so the technician can prepare." optional>
             <TextInput
               value={customerIssue}
               onChangeText={setCustomerIssue}
@@ -251,6 +250,8 @@ export default function BookScreen() {
               className="min-h-12 rounded-[14px] border border-slate-200/60 bg-slate-50 px-4 text-base text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
             />
           </SectionCard>
+
+          <PreferredTimePicker value={preferredAt} onChange={setPreferredAt} />
 
           {error ? (
             <View className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 dark:border-rose-900 dark:bg-rose-950">

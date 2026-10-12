@@ -13,7 +13,10 @@ export default function TechTabs() {
             <TabButton>Jobs</TabButton>
           </TabTrigger>
           <TabTrigger name="route" href="/(tech)/(tabs)/route" asChild>
-            <TabButton>Route</TabButton>
+            <TabButton>Ongoing</TabButton>
+          </TabTrigger>
+          <TabTrigger name="earnings" href="/(tech)/(tabs)/earnings" asChild>
+            <TabButton>Earnings</TabButton>
           </TabTrigger>
           <TabTrigger name="crew" href="/(tech)/(tabs)/crew" asChild>
             <TabButton>Account</TabButton>

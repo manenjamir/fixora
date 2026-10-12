@@ -67,6 +67,8 @@ export type Job = {
   repairLocation?: RepairLocation;
   customerIssue?: string;
   deviceBrand?: string;
+  preferredAt?: number;
+  technicianNotes?: string;
   estimatedCompletion: string;
   customerLocation?: Coordinates;
   technician: { lat?: number; lng?: number; etaMinutes?: number };
@@ -82,9 +84,10 @@ type CreateJobInput = {
   mediaBase64?: string;
   placeTag: PlaceTag;
   address: string;
-  customerIssue: string;
+  customerIssue?: string;
   deviceBrand: string;
   customerLocation?: Coordinates;
+  preferredAt?: string;
 };
 
 type JobContextValue = {
@@ -92,8 +95,9 @@ type JobContextValue = {
   deviceLocation: Coordinates | null;
   jobs: Job[];
   getJob: (id: string) => Job | undefined;
+  updateJob: (id: string, values: DatabaseUpdate) => Promise<void>;
   createJob: (input: CreateJobInput) => Promise<Job>;
-  startDispatch: (id: string) => Promise<void>;
+  acceptJob: (id: string) => Promise<void>;
   startInspection: (id: string) => Promise<void>;
   sendQuote: (id: string, diagnosis: string, tiers: JobTiers, repairLocation: RepairLocation) => Promise<void>;
   chooseTier: (id: string, tier: RepairTier) => Promise<void>;
@@ -188,6 +192,8 @@ async function mapRow(row: JobRow): Promise<Job> {
     repairLocation: isRepairLocation(row.repair_location) ? row.repair_location : undefined,
     customerIssue: row.customer_issue ?? undefined,
     deviceBrand: row.device_brand ?? undefined,
+    preferredAt: row.preferred_at ? new Date(row.preferred_at).getTime() : undefined,
+    technicianNotes: row.technician_notes ?? undefined,
     estimatedCompletion: row.estimated_completion || '1-2 days',
     customerLocation:
       row.customer_lat != null && row.customer_lng != null
@@ -219,6 +225,8 @@ function sameAsideFromLocation(job: Job, row: JobRow) {
     (job.mediaPath ?? null) === (row.media_path ?? null) &&
     (job.customerIssue ?? null) === (row.customer_issue ?? null) &&
     (job.deviceBrand ?? null) === (row.device_brand ?? null) &&
+    (job.preferredAt ?? null) === (row.preferred_at ? new Date(row.preferred_at).getTime() : null) &&
+    (job.technicianNotes ?? null) === (row.technician_notes ?? null) &&
     (job.tiers?.a1 ?? null) === (row.price_a1 == null ? null : Number(row.price_a1)) &&
     (job.tiers?.a2 ?? null) === (row.price_a2 == null ? null : Number(row.price_a2)) &&
     (job.tiers?.a3 ?? null) === (row.price_a3 == null ? null : Number(row.price_a3)) &&
@@ -394,10 +402,11 @@ export function JobProvider({ children }: { children: ReactNode }) {
           category: input.category,
           place_tag: input.placeTag,
           address: input.address,
-          customer_issue: input.customerIssue,
+          customer_issue: input.customerIssue || null,
           device_brand: input.deviceBrand,
           customer_lat: input.customerLocation?.lat,
           customer_lng: input.customerLocation?.lng,
+          preferred_at: input.preferredAt,
           status: 'requested',
           estimated_completion: '1-2 days',
         })
@@ -428,13 +437,13 @@ export function JobProvider({ children }: { children: ReactNode }) {
     [refreshJobs, session?.user.id],
   );
 
-  const startDispatch = useCallback(
-    (id: string) =>
-      updateJob(id, {
-        status: 'dispatched',
-        technician_id: session?.user.id,
-      }),
-    [session?.user.id, updateJob],
+  const acceptJob = useCallback(
+    async (id: string) => {
+      const { error } = await supabase.rpc('accept_job', { job_id: id });
+      if (error) throw error;
+      await refreshJobs();
+    },
+    [refreshJobs],
   );
 
   const startInspection = useCallback((id: string) => updateJob(id, { status: 'inspecting' }), [updateJob]);
@@ -513,8 +522,9 @@ export function JobProvider({ children }: { children: ReactNode }) {
       deviceLocation,
       jobs,
       getJob,
+      updateJob,
       createJob,
-      startDispatch,
+      acceptJob,
       startInspection,
       sendQuote,
       chooseTier,
@@ -529,8 +539,9 @@ export function JobProvider({ children }: { children: ReactNode }) {
       deviceLocation,
       jobs,
       getJob,
+      updateJob,
       createJob,
-      startDispatch,
+      acceptJob,
       startInspection,
       sendQuote,
       chooseTier,
@@ -557,6 +568,8 @@ type DatabaseUpdate = {
   completed_at?: string;
   completion_media_path?: string;
   completion_media_type?: 'image' | 'video';
+  technician_notes?: string | null;
+  preferred_at?: string | null;
   media_path?: string;
   media_type?: 'image' | 'video';
 };

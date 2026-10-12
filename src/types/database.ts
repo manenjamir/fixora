@@ -33,11 +33,13 @@ export type Database = {
           media_path: string | null
           media_type: string | null
           place_tag: string
+          preferred_at: string | null
           price_a1: number | null
           repair_location: string | null
           price_a2: number | null
           price_a3: number | null
           status: string
+          technician_notes: string | null
           tech_lat: number | null
           tech_lng: number | null
           technician_id: string | null
@@ -63,11 +65,13 @@ export type Database = {
           media_path?: string | null
           media_type?: string | null
           place_tag: string
+          preferred_at?: string | null
           price_a1?: number | null
           repair_location?: string | null
           price_a2?: number | null
           price_a3?: number | null
           status?: string
+          technician_notes?: string | null
           tech_lat?: number | null
           tech_lng?: number | null
           technician_id?: string | null
@@ -93,11 +97,13 @@ export type Database = {
           media_path?: string | null
           media_type?: string | null
           place_tag?: string
+          preferred_at?: string | null
           price_a1?: number | null
           repair_location?: string | null
           price_a2?: number | null
           price_a3?: number | null
           status?: string
+          technician_notes?: string | null
           tech_lat?: number | null
           tech_lng?: number | null
           technician_id?: string | null
@@ -123,6 +129,9 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          address: string | null
+          avatar_path: string | null
+          email: string | null
           full_name: string | null
           id: string
           phone: string | null
@@ -131,6 +140,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          address?: string | null
+          avatar_path?: string | null
+          email?: string | null
           full_name?: string | null
           id: string
           phone?: string | null
@@ -139,6 +151,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          address?: string | null
+          avatar_path?: string | null
+          email?: string | null
           full_name?: string | null
           id?: string
           phone?: string | null
@@ -147,11 +162,39 @@ export type Database = {
         }
         Relationships: []
       }
+      job_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          customer_id: string
+          job_id: string
+          rating: number
+          technician_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          customer_id: string
+          job_id: string
+          rating: number
+          technician_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          customer_id?: string
+          job_id?: string
+          rating?: number
+          technician_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      accept_job: { Args: { job_id: string }; Returns: undefined }
       is_technician: { Args: never; Returns: boolean }
       update_tech_location: {
         Args: {

@@ -97,7 +97,7 @@ const STATUS_TONE: Record<JobStatus, { wrap: string; dot: string; text: string }
   },
 };
 
-function categoryIcon(id: string): LucideIcon {
+export function categoryIcon(id: string): LucideIcon {
   switch (id) {
     case 'phones':
       return Smartphone;

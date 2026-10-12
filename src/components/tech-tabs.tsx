@@ -11,14 +11,22 @@ export default function TechTabs() {
     <NativeTabs
       backgroundColor={colors.background}
       indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.accent } }}>
+      labelVisibilityMode="labeled"
+      labelStyle={{
+        default: { color: colors.textSecondary },
+        selected: { color: colors.accent },
+      }}>
       <NativeTabs.Trigger name="inbox">
         <NativeTabs.Trigger.Label>Jobs</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="list.bullet.rectangle.fill" md="assignment" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="route">
-        <NativeTabs.Trigger.Label>Route</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="map.fill" md="map" />
+        <NativeTabs.Trigger.Label>Ongoing</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="wrench.and.screwdriver.fill" md="build" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="earnings">
+        <NativeTabs.Trigger.Label>Earnings</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="indianrupeesign.circle.fill" md="payments" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="crew">
         <NativeTabs.Trigger.Label>Account</NativeTabs.Trigger.Label>

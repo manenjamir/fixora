@@ -5,6 +5,7 @@ import { StyleSheet, TextInput } from 'react-native';
 import { AppButton, Content, Screen } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth';
+import { formatPhone } from '@/lib/phone';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -38,7 +39,7 @@ export default function VerifyScreen() {
     <Screen>
       <Content style={styles.content}>
         <ThemedText type="subtitle">Enter OTP</ThemedText>
-        <ThemedText themeColor="textSecondary">We sent a code to {phone}</ThemedText>
+        <ThemedText themeColor="textSecondary">We sent a code to {phone ? formatPhone(phone) : ''}</ThemedText>
         <TextInput
           value={code}
           onChangeText={setCode}

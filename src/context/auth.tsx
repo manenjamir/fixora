@@ -14,6 +14,7 @@ type AuthContextValue = {
   sendOtp: (phone: string, role: AppRole) => Promise<void>;
   verifyOtp: (phone: string, token: string) => Promise<void>;
   saveSpecializations: (specializations: string[]) => Promise<void>;
+  updateProfile: (patch: { full_name?: string; email?: string | null; address?: string | null; avatar_path?: string | null }) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -110,6 +111,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(data);
   }, [session?.user.id]);
 
+  const updateProfile = useCallback(
+    async (patch: { full_name?: string; email?: string | null; address?: string | null; avatar_path?: string | null }) => {
+      if (!session?.user.id) throw new Error('Sign in before updating your profile');
+      const { data, error } = await supabase.from('profiles').update(patch).eq('id', session.user.id).select('*').single();
+      if (error || !data) throw error ?? new Error('Could not update your profile');
+      setProfile(data);
+    },
+    [session?.user.id],
+  );
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
@@ -117,8 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ session, profile, loading, sendOtp, verifyOtp, saveSpecializations, signOut }),
-    [session, profile, loading, sendOtp, verifyOtp, saveSpecializations, signOut],
+    () => ({ session, profile, loading, sendOtp, verifyOtp, saveSpecializations, updateProfile, signOut }),
+    [session, profile, loading, sendOtp, verifyOtp, saveSpecializations, updateProfile, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
