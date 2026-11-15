@@ -65,6 +65,11 @@ const STATUS_TONE: Record<JobStatus, { wrap: string; dot: string; text: string }
     dot: 'bg-emerald-500',
     text: 'text-emerald-700 dark:text-emerald-300',
   },
+  expired: {
+    wrap: 'bg-rose-50 dark:bg-rose-950',
+    dot: 'bg-rose-500',
+    text: 'text-rose-700 dark:text-rose-300',
+  },
   declined_by_customer: {
     wrap: 'bg-rose-50 dark:bg-rose-950',
     dot: 'bg-rose-500',

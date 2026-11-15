@@ -195,6 +195,7 @@ export type Database = {
     }
     Functions: {
       accept_job: { Args: { job_id: string }; Returns: undefined }
+      expire_unaccepted_jobs: { Args: never; Returns: undefined }
       is_technician: { Args: never; Returns: boolean }
       update_tech_location: {
         Args: {

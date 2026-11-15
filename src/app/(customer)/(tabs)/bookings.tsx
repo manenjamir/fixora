@@ -9,7 +9,8 @@ import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth';
 import { STATUS_LABEL, useJobs, type Job } from '@/context/job-store';
 import { useTheme } from '@/hooks/use-theme';
-import { customerJobHref, isActiveJob } from '@/lib/job-routes';
+import { customerJobHref, isUpcomingBooking } from '@/lib/job-routes';
+import { isExpiredBooking } from '@/lib/schedule';
 import { supabase } from '@/lib/supabase';
 
 type Section = 'upcoming' | 'previous';
@@ -44,7 +45,7 @@ export default function CustomerJobsScreen() {
   const [section, setSection] = useState<Section>('upcoming');
   const [reviews, setReviews] = useState<Record<string, number>>({});
   const visible = jobs
-    .filter((job) => (section === 'upcoming' ? isActiveJob(job) : !isActiveJob(job)))
+    .filter((job) => (section === 'upcoming' ? isUpcomingBooking(job) : !isUpcomingBooking(job)))
     .sort((left, right) => {
       const direction = section === 'upcoming' ? 1 : -1;
       return (whenFor(left, section) - whenFor(right, section)) * direction;
@@ -102,7 +103,9 @@ export default function CustomerJobsScreen() {
               const device = getDevice(job.category);
               const Icon = categoryIcon(job.category);
               const finished = (job.status === 'on_site_repaired' || job.status === 'delivered') && Boolean(job.technicianId);
+              const expired = isExpiredBooking(job);
               const open = () => router.push(section === 'upcoming' ? customerJobHref(job) : `/(customer)/history/${job.id}`);
+              const reschedule = () => router.push({ pathname: '/(customer)/reschedule/[id]', params: { id: job.id } });
               return (
                 <View key={job.id} style={[styles.card, { backgroundColor: theme.background, borderColor: theme.backgroundSelected }]}>
                   <View style={styles.top}>
@@ -121,19 +124,28 @@ export default function CustomerJobsScreen() {
                         {when.toLocaleDateString('en-IN', { weekday: 'long' })} · {timeSlot(when)}
                       </Text>
                       <View style={[styles.status, { backgroundColor: theme.backgroundElement }]}>
-                        <Text style={[styles.statusText, { color: theme.textSecondary }]}>{STATUS_LABEL[job.status]}</Text>
+                        <Text style={[styles.statusText, { color: theme.textSecondary }]}>
+                          {expired ? 'Booking expired' : STATUS_LABEL[job.status]}
+                        </Text>
                       </View>
+                      {section === 'upcoming' && expired ? (
+                        <Text style={[styles.when, { color: theme.text }]}>Your booking has expired. Want to reschedule?</Text>
+                      ) : null}
                     </View>
                   </View>
                   <View style={[styles.actions, { borderTopColor: theme.backgroundElement }]}>
-                    {section === 'upcoming' ? (
+                    {section === 'upcoming' && expired ? (
+                      <Pressable accessibilityRole="button" onPress={reschedule} style={styles.primary}>
+                        <Text style={styles.primaryLabel}>Reschedule</Text>
+                      </Pressable>
+                    ) : section === 'upcoming' ? (
                       <>
                         <Pressable accessibilityRole="button" onPress={open} style={styles.primary}>
                           <Text style={styles.primaryLabel}>Track</Text>
                         </Pressable>
                         <Pressable
                           accessibilityRole="button"
-                          onPress={() => router.push({ pathname: '/(customer)/reschedule/[id]', params: { id: job.id } })}
+                          onPress={reschedule}
                           style={[styles.secondary, { borderColor: theme.backgroundSelected }]}>
                           <Text style={[styles.link, { color: theme.text }]}>Reschedule</Text>
                         </Pressable>

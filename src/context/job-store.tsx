@@ -16,6 +16,7 @@ export type JobStatus =
   | 'inspecting'
   | 'quoted'
   | 'accepted'
+  | 'expired'
   | 'declined_by_customer'
   | 'declined_by_technician'
   | 'on_site_repaired'
@@ -122,6 +123,7 @@ export const STATUS_LABEL: Record<JobStatus, string> = {
   inspecting: 'Free check-up in progress',
   quoted: 'Repair estimate ready',
   accepted: 'Repair approved',
+  expired: 'Booking expired',
   declined_by_customer: 'Declined by Customer',
   declined_by_technician: 'Declined by Technician',
   on_site_repaired: 'Repaired on-site',
@@ -291,6 +293,7 @@ export function JobProvider({ children }: { children: ReactNode }) {
       setJobs([]);
       return;
     }
+    await supabase.rpc('expire_unaccepted_jobs');
     const { data, error } = await supabase.from('jobs').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     const mapped = await Promise.all((data ?? []).map(mapRow));

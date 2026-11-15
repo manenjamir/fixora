@@ -7,7 +7,7 @@ import { AppButton, Content, Screen } from '@/components/repair-ui';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useJobs } from '@/context/job-store';
-import { isActiveJob } from '@/lib/job-routes';
+import { canRescheduleJob } from '@/lib/job-routes';
 
 export default function RescheduleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,7 +17,7 @@ export default function RescheduleScreen() {
   const [preferredAt, setPreferredAt] = useState<Date | null>(job?.preferredAt ? new Date(job.preferredAt) : null);
   const [saving, setSaving] = useState(false);
 
-  if (!job || !isActiveJob(job)) {
+  if (!job || !canRescheduleJob(job)) {
     return (
       <Screen>
         <ThemedText>This booking can no longer be rescheduled.</ThemedText>
@@ -32,7 +32,7 @@ export default function RescheduleScreen() {
     }
     setSaving(true);
     try {
-      await updateJob(job.id, { preferred_at: preferredAt.toISOString() });
+      await updateJob(job.id, { preferred_at: preferredAt.toISOString(), status: 'requested' });
       router.back();
     } catch (error) {
       Alert.alert('Could not reschedule', error instanceof Error ? error.message : 'Try again');

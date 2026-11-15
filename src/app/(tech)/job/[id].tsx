@@ -10,7 +10,7 @@ import { ThemedText } from '@/components/themed-text';
 import { getDevice } from '@/constants/devices';
 import { Spacing } from '@/constants/theme';
 import { formatRupees, REPAIR_LOCATION_COPY, TIER_COPY, useJobs, type Job, type JobMediaInput, type RepairLocation } from '@/context/job-store';
-import { formatPreferredAt } from '@/lib/schedule';
+import { formatPreferredAt, isExpiredBooking } from '@/lib/schedule';
 import { formatPhone } from '@/lib/phone';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/hooks/use-theme';
@@ -193,7 +193,9 @@ export default function TechJobScreen() {
             <ThemedText themeColor="textSecondary">No media attached. Ask on arrival if needed.</ThemedText>
           )}
 
-          {selectedJob.status === 'requested' ? (
+          {isExpiredBooking(selectedJob) ? (
+            <ThemedText themeColor="textSecondary">This request is no longer available.</ThemedText>
+          ) : selectedJob.status === 'requested' ? (
             <AppButton
               label="Accept job"
               onPress={async () => {

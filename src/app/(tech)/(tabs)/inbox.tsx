@@ -7,7 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { getDevice, groupForCategory } from '@/constants/devices';
 import { useAuth } from '@/context/auth';
 import { useJobs } from '@/context/job-store';
-import { formatPreferredAt } from '@/lib/schedule';
+import { formatPreferredAt, isUnacceptedSlotOver } from '@/lib/schedule';
 
 export default function TechJobsScreen() {
   const router = useRouter();
@@ -18,6 +18,7 @@ export default function TechJobsScreen() {
     (job) =>
       job.status === 'requested' &&
       !job.technicianId &&
+      !isUnacceptedSlotOver(job) &&
       specializations.includes(groupForCategory(job.category)),
   );
 

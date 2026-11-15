@@ -10,6 +10,7 @@ import { Spacing } from '@/constants/theme';
 import { STATUS_LABEL, useJobs, type JobStatus } from '@/context/job-store';
 import { useTheme } from '@/hooks/use-theme';
 import type { MapPin as GeoPin } from '@/lib/geo';
+import { isExpiredBooking } from '@/lib/schedule';
 
 const STEPS = [
   { title: 'Booking placed', detail: 'We are matching a technician for your free check-up.' },
@@ -59,6 +60,21 @@ export default function TrackScreen() {
     return (
       <Screen>
         <ThemedText>This booking is no longer available.</ThemedText>
+      </Screen>
+    );
+  }
+
+  if (isExpiredBooking(job)) {
+    return (
+      <Screen>
+        <Content>
+          <ThemedText type="subtitle">Your booking has expired</ThemedText>
+          <ThemedText themeColor="textSecondary">Want to reschedule?</ThemedText>
+          <AppButton
+            label="Reschedule"
+            onPress={() => router.push({ pathname: '/(customer)/reschedule/[id]', params: { id: job.id } })}
+          />
+        </Content>
       </Screen>
     );
   }
